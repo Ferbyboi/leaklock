@@ -1,0 +1,24 @@
+name: Weekly Quality Check
+
+on:
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday 9am UTC
+
+jobs:
+  claude-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_MODEL: claude-haiku-4-5-20251001
+          ANTHROPIC_CLAUDE_CODE_EFFORT: low
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Weekly quality check for LeakLock. Find:
+            1. Routes missing tenant_id filter
+            2. Celery tasks missing retry logic
+            3. Test coverage below 70% in any module
+            Report findings as a summary comment. Do not auto-fix.

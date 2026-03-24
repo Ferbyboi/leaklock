@@ -1,0 +1,43 @@
+# ■■ Secrets — NEVER commit ■■
+.env
+.env.*
+*.pem
+*.key
+*_secret*
+*credentials*
+.aws/
+secrets/
+
+# ■■ Python ■■
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+htmlcov/
+coverage.xml
+*.coverage
+
+# ■■ Node ■■
+node_modules/
+.next/
+.turbo/
+*.min.js
+*.min.css
+
+# ■■ Lock files ■■
+package-lock.json
+yarn.lock
+poetry.lock
+uv.lock
+
+# ■■ OS / Editor ■■
+.DS_Store
+.idea/
+*.swp
+Thumbs.db

@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git config:*)",
+      "Bash(gh api:*)",
+      "Bash(chmod +x \"C:/Users/ferby/OneDrive/Desktop/ClaudeProject-1/.claude/hooks/security-check.sh\")",
+      "Bash(chmod +x \"C:/Users/ferby/OneDrive/Desktop/ClaudeProject-1/.claude/hooks/post-write.sh\")",
+      "Bash(code --version)",
+      "Bash(claude --version)",
+      "Bash(npm install:*)",
+      "Bash(code --install-extension anthropic.claude-code)",
+      "Bash(code --install-extension eamodio.gitlens)",
+      "Bash(code --install-extension usernamehw.errorlens)",
+      "Bash(code --install-extension charliermarsh.ruff)",
+      "Bash(code --install-extension ms-python.vscode-pylance)",
+      "Bash(winget upgrade:*)",
+      "Bash(code --install-extension esbenp.prettier-vscode)",
+      "Bash(code --install-extension rangav.vscode-thunder-client)",
+      "Bash(code --install-extension ms-azuretools.vscode-docker)",
+      "Bash(code --install-extension gabrielgrinberg.auto-run-command)",
+      "Bash(code --install-extension gruntfuggly.todo-tree)",
+      "Bash(claude doctor:*)"
+    ]
+  }
+}

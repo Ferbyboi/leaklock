@@ -1,0 +1,28 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '0 9 * * 1'  # Every Monday 9am UTC
+
+jobs:
+  claude-security-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_MODEL: claude-opus-4-6
+          ANTHROPIC_CLAUDE_CODE_EFFORT: high
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Full security audit of the LeakLock codebase. Check for:
+            1. SQL injection (even via ORM)
+            2. RLS gaps — tables missing tenant_id
+            3. Auth bypass — routes missing JWT validation
+            4. Sensitive data in logs
+            5. Hardcoded secrets or credentials
+            Create a GitHub issue for each finding with severity label.

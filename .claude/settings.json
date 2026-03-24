@@ -1,0 +1,47 @@
+{
+  "model": "opusplan",
+  "availableModels": [
+    "opus",
+    "opusplan",
+    "opus[1m]",
+    "sonnet",
+    "sonnet[1m]",
+    "haiku"
+  ],
+  "contextWindowUsageThreshold": 0.7,
+  "claudeCode.preferredLocation": "sidebar",
+  "auto-run-command.rules": [
+    { "condition": "always", "command": "claude-vscode.sidebar.open" }
+  ],
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "command": ".claude/hooks/security-check.sh",
+        "timeout": 5
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit",
+        "command": ".claude/hooks/post-write.sh",
+        "timeout": 10
+      }
+    ],
+    "Stop": [
+      {
+        "type": "command",
+        "command": "echo 'feedback: Before stopping, check /cost, verify tests pass, review diff'"
+      }
+    ]
+  },
+  "permissions": {
+    "deny": [
+      "Bash(rm -rf*)",
+      "Bash(git push *main*)",
+      "Bash(git push *--force*)",
+      "Bash(*DROP TABLE*)",
+      "Bash(*DELETE FROM*WHERE*)"
+    ]
+  }
+}

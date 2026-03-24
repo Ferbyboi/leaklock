@@ -1,0 +1,42 @@
+{
+  "mcpServers": {
+    "prompt-caching": {
+      "command": "npx",
+      "args": ["-y", "prompt-caching-mcp"]
+    },
+    "supabase": {
+      "command": "npx",
+      "args": ["supabase", "mcp"]
+    },
+    "github": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-github"],
+      "env": { "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PAT}" }
+    },
+    "postgres": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-postgres", "${DATABASE_URL}"]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-filesystem", "./"]
+    },
+    "slack": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-slack"],
+      "env": { "SLACK_BOT_TOKEN": "${SLACK_BOT_TOKEN}" }
+    },
+    "fetch": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-fetch"]
+    },
+    "seq-think": {
+      "command": "npx",
+      "args": ["@modelcontextprotocol/server-sequential-thinking"]
+    },
+    "context7": {
+      "command": "npx",
+      "args": ["@upstash/context7-mcp"]
+    }
+  }
+}

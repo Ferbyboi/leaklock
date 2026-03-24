@@ -1,0 +1,54 @@
+# ■■ Security — NEVER let Claude read these ■■■■■
+.env
+.env.*
+*.pem
+*.key
+*_secret*
+*credentials*
+.aws/
+secrets/
+
+# ■■ Python build artifacts ■■■■■■■■■■■■■■■■■■■■■■
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+dist/
+build/
+.venv/
+
+# ■■ Node build artifacts ■■■■■■■■■■■■■■■■■■■■■■■■
+**/node_modules/
+**/.next/
+**/dist/
+**/.turbo/
+**/*.min.js
+**/*.min.css
+
+# ■■ Lock files (huge, rarely useful) ■■■■■■■■■■■
+package-lock.json
+yarn.lock
+poetry.lock
+uv.lock
+
+# ■■ Media and binary files ■■■■■■■■■■■■■■■■■■■■■■
+**/*.jpg
+**/*.jpeg
+**/*.png
+**/*.gif
+**/*.pdf
+**/*.zip
+
+# ■■ Editor and OS files ■■■■■■■■■■■■■■■■■■■■■■■■■
+.DS_Store
+.idea/
+*.swp
+
+# ■■ Generated — Claude writes, doesn't need to read
+**/migrations/versions/
+coverage.xml
+*.coverage
+htmlcov/

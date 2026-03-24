@@ -1,0 +1,26 @@
+name: PR Review
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+jobs:
+  claude-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: anthropics/claude-code-action@v1
+        env:
+          ANTHROPIC_MODEL: claude-sonnet-4-6
+          ANTHROPIC_CLAUDE_CODE_EFFORT: medium
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            Review this LeakLock PR. Check every changed file for:
+            1. tenant_id filter on ALL database queries
+            2. Auth0 JWT validated + role checked on every route
+            3. No blocking AI calls in HTTP handlers (must use Celery)
+            4. Every new table has RLS policy
+            5. All exceptions caught + sent to Sentry with job_id
+            Return PASS or FAIL per file with line numbers.
