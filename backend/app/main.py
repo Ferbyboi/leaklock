@@ -23,6 +23,7 @@ def health():
     return {"status": "ok"}
 
 
-# Routers registered here as they are built
-# from app.routers import jobs, webhooks, reconciliation
-# app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+from app.routers import jobs, webhooks
+
+app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
+app.include_router(webhooks.router, tags=["webhooks"])
