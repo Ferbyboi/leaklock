@@ -1,0 +1,27 @@
+{
+  "name": "claudeproject-1",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ferbyboi/leaklock.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/Ferbyboi/leaklock/issues"
+  },
+  "homepage": "https://github.com/Ferbyboi/leaklock#readme",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.100.0",
+    "@trigger.dev/nextjs": "^3.3.12",
+    "@trigger.dev/sdk": "^4.4.3",
+    "zod": "^3.25.76"
+  }
+}
