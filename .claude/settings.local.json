@@ -19,7 +19,12 @@
       "Bash(code --install-extension ms-azuretools.vscode-docker)",
       "Bash(code --install-extension gabrielgrinberg.auto-run-command)",
       "Bash(code --install-extension gruntfuggly.todo-tree)",
-      "Bash(claude doctor:*)"
+      "Bash(claude doctor:*)",
+      "Bash(gh --version)",
+      "Bash(git --version)",
+      "Bash(winget install:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh auth:*)"
     ]
   }
 }
