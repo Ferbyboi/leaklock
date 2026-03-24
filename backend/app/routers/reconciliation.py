@@ -20,7 +20,7 @@ async def review_reconciliation(
     job_id: UUID,
     result_id: UUID,
     body: AuditorAction,
-    user: dict = Security(require_role("admin", "auditor", "manager")(get_current_user)),
+    user: dict = Security(require_role("admin", "auditor", "manager")),
 ):
     """
     Auditor reviews a reconciliation result.
@@ -83,7 +83,7 @@ async def review_reconciliation(
 
 @router.get("/reconciliation/dashboard")
 async def reconciliation_dashboard(
-    user: dict = Security(require_role("admin", "auditor", "manager")(get_current_user)),
+    user: dict = Security(require_role("admin", "auditor", "manager")),
 ):
     """
     Auditor dashboard — all unreviewed discrepancies for this tenant.

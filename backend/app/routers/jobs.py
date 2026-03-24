@@ -52,7 +52,7 @@ async def get_job(
 @router.post("/{job_id}/approve")
 async def approve_job(
     job_id: UUID,
-    user: dict = Security(require_role("admin", "manager")(get_current_user)),
+    user: dict = Security(require_role("admin", "manager")),
 ):
     """Approve a job invoice — marks it as approved, tenant-scoped."""
     supabase = get_supabase()
@@ -100,7 +100,7 @@ async def approve_job(
 @router.post("/{job_id}/parse")
 async def trigger_parse(
     job_id: UUID,
-    user: dict = Security(require_role("admin", "manager")(get_current_user)),
+    user: dict = Security(require_role("admin", "manager")),
 ):
     """Manually trigger field-note parsing for a job (re-queue Celery task)."""
     supabase = get_supabase()
