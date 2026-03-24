@@ -33,6 +33,18 @@ export default async function DashboardLayout({
           >
             Revenue Leaks
           </Link>
+          <Link
+            href="/auditor"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-50"
+          >
+            Auditor Review
+          </Link>
+          <Link
+            href="/billing"
+            className="flex items-center gap-2 px-3 py-2 text-sm text-gray-700 rounded-lg hover:bg-gray-50"
+          >
+            Billing
+          </Link>
         </nav>
         <div className="p-3 border-t border-gray-100">
           <p className="text-xs text-gray-400 px-3 mb-2 truncate">{user.email}</p>
