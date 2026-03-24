@@ -95,3 +95,47 @@ async def approve_job(
     })
 
     return {"approved": True, "job_id": str(job_id)}
+
+
+@router.post("/{job_id}/parse")
+async def trigger_parse(
+    job_id: UUID,
+    user: dict = Security(require_role("admin", "manager")(get_current_user)),
+):
+    """Manually trigger field-note parsing for a job (re-queue Celery task)."""
+    supabase = get_supabase()
+    fetch = (
+        supabase.table("jobs")
+        .select("id, tenant_id")
+        .eq("id", str(job_id))
+        .eq("tenant_id", user["tenant_id"])
+        .single()
+        .execute()
+    )
+    if not fetch.data:
+        raise HTTPException(status_code=404, detail="Job not found")
+
+    from app.workers.tasks import process_field_notes
+    task = process_field_notes.delay(str(job_id), user["tenant_id"])
+    return {"queued": True, "task_id": task.id, "job_id": str(job_id)}
+
+
+@router.get("/{job_id}/reconciliation")
+async def get_reconciliation(
+    job_id: UUID,
+    user: dict = Security(get_current_user),
+):
+    """Return the latest reconciliation result for a job."""
+    supabase = get_supabase()
+    result = (
+        supabase.table("reconciliation_results")
+        .select("*")
+        .eq("job_id", str(job_id))
+        .eq("tenant_id", user["tenant_id"])
+        .order("run_at", desc=True)
+        .limit(1)
+        .execute()
+    )
+    if not result.data:
+        raise HTTPException(status_code=404, detail="No reconciliation result found")
+    return result.data[0]

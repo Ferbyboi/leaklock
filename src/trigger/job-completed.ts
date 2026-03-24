@@ -34,7 +34,7 @@ client.defineJob({
       'upsert-job',
       async () => supabase
         .from('jobs')
-        .upsert({ crm_job_id: data.crm_job_id, tenant_id: data.tenant_id, status: 'pending_invoice' })
+        .upsert({ crm_job_id: data.crm_job_id, tenant_id: data.tenant_id, status: 'pending_invoice', match_status: 'pending' })
         .select()
         .single()
     );
