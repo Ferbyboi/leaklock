@@ -5,3 +5,9 @@ export const client = new TriggerClient({
   apiKey: process.env.TRIGGER_API_KEY!,
   apiUrl: process.env.TRIGGER_API_URL,
 });
+
+// Register all jobs
+import './job-completed';
+import './webhooks/jobber';
+import './webhooks/servicetitan';
+import './webhooks/generic';
