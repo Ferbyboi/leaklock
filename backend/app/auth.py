@@ -52,7 +52,8 @@ def get_current_user(
 
 def require_role(*roles: str):
     """Dependency factory — enforces role-based access."""
-    def _check(user: dict = Security(get_current_user)):
+    def _check(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
+        user = get_current_user(credentials)
         if user["role"] not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
