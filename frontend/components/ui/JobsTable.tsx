@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import clsx from 'clsx';
 
 interface Job {
@@ -62,7 +63,11 @@ export default function JobsTable({ jobs }: { jobs: Job[] }) {
             const leakCents = rec?.estimated_leak_cents ?? 0;
             return (
               <tr key={job.id} className="hover:bg-gray-50 transition-colors">
-                <td className="px-4 py-3 font-mono text-gray-700">{job.crm_job_id}</td>
+                <td className="px-4 py-3 font-mono">
+                  <Link href={`/jobs/${job.id}`} className="text-blue-600 hover:underline">
+                    {job.crm_job_id}
+                  </Link>
+                </td>
                 <td className="px-4 py-3">
                   <span className={clsx('px-2 py-0.5 rounded-full text-xs font-medium', STATUS_STYLES[job.status] ?? 'bg-gray-50 text-gray-600')}>
                     {job.status.replace('_', ' ')}

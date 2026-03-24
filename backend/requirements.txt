@@ -15,3 +15,4 @@ posthog==3.5.0
 twilio==9.1.0
 sendgrid==6.11.0
 python-multipart==0.0.9
+stripe==9.9.0
