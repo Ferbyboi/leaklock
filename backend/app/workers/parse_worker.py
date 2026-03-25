@@ -19,7 +19,7 @@ If no items found, return []. Never add items not mentioned in the text.
 '''
 
 
-async def parse_field_notes(raw_text: str) -> list[dict]:
+def parse_field_notes(raw_text: str) -> list[dict]:
     if not raw_text.strip():
         return []
 
