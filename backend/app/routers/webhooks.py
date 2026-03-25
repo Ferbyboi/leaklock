@@ -1,11 +1,12 @@
 import os
 import logging
 import httpx
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Depends, Request, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 
 from app.db import get_db
+from app.middleware.rate_limit import rate_limit_webhooks
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -101,7 +102,7 @@ class GenericWebhookPayload(BaseModel):
     draft_invoice: Optional[dict] = None
 
 
-@router.post("/webhooks/jobber")
+@router.post("/webhooks/jobber", dependencies=[Depends(rate_limit_webhooks)])
 async def jobber_webhook(request: Request):
     """Receive Jobber webhook and forward to Trigger.dev."""
     body = await request.json()
@@ -113,7 +114,7 @@ async def jobber_webhook(request: Request):
     return {"received": True}
 
 
-@router.post("/webhooks/servicetitan")
+@router.post("/webhooks/servicetitan", dependencies=[Depends(rate_limit_webhooks)])
 async def servicetitan_webhook(request: Request):
     """Receive ServiceTitan webhook and forward to Trigger.dev."""
     body = await request.json()
@@ -125,7 +126,7 @@ async def servicetitan_webhook(request: Request):
     return {"received": True}
 
 
-@router.post("/webhooks/generic")
+@router.post("/webhooks/generic", dependencies=[Depends(rate_limit_webhooks)])
 async def generic_webhook(payload: GenericWebhookPayload):
     """Generic webhook — directly ingests job into Supabase and queues Celery."""
     job_id = _ingest_job(payload.model_dump())

@@ -108,10 +108,18 @@ async def stripe_webhook(
     """Handle Stripe webhook events — update tenant subscription status."""
     body = await request.body()
 
+    if not WEBHOOK_SECRET:
+        raise HTTPException(status_code=500, detail="Stripe webhook secret not configured")
+
+    if not stripe_signature:
+        raise HTTPException(status_code=400, detail="Missing Stripe-Signature header")
+
     try:
         event = stripe.Webhook.construct_event(body, stripe_signature, WEBHOOK_SECRET)
     except stripe.error.SignatureVerificationError:
         raise HTTPException(status_code=400, detail="Invalid Stripe signature")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid payload")
 
     supabase = get_supabase()
 

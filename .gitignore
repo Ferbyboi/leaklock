@@ -41,3 +41,4 @@ uv.lock
 .idea/
 *.swp
 Thumbs.db
+.claude/settings.local.json
