@@ -51,6 +51,13 @@ def items_match(note_item: str, invoice_item: str, threshold: float = 0.75) -> b
     return overlap >= threshold
 
 
+def _get_desc(item) -> str:
+    """Get item description from dict (handles both 'description' and 'item' keys) or dataclass."""
+    if isinstance(item, dict):
+        return item.get('description') or item.get('item', '')
+    return item.description
+
+
 def run_three_way_match(
     estimate_items: list,   # Input A — The Promise
     field_note_items: list, # Input B — parsed by AI
@@ -69,14 +76,13 @@ def run_three_way_match(
 
         desc = note_item['item']
         found_in_invoice = any(
-            items_match(desc, inv['description'] if isinstance(inv, dict) else inv.description)
+            items_match(desc, _get_desc(inv))
             for inv in invoice_items
         )
 
         if not found_in_invoice:
             est_match = next(
-                (e for e in estimate_items
-                 if items_match(desc, e['description'] if isinstance(e, dict) else e.description)),
+                (e for e in estimate_items if items_match(desc, _get_desc(e))),
                 None
             )
             unit_price = (
@@ -92,9 +98,9 @@ def run_three_way_match(
             })
 
     for inv in invoice_items:
-        inv_desc = inv['description'] if isinstance(inv, dict) else inv.description
+        inv_desc = _get_desc(inv)
         in_estimate = any(
-            items_match(inv_desc, e['description'] if isinstance(e, dict) else e.description)
+            items_match(inv_desc, _get_desc(e))
             for e in estimate_items
         )
         if not in_estimate:
