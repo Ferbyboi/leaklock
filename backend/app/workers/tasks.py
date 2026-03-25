@@ -7,7 +7,7 @@ from app.db import get_db
 
 def _run(coro):
     """Run an async coroutine from a sync Celery task."""
-    return asyncio.get_event_loop().run_until_complete(coro)
+    return asyncio.run(coro)
 
 
 @celery_app.task(bind=True, max_retries=3, default_retry_delay=60, name="tasks.process_field_notes")
@@ -61,7 +61,7 @@ def process_field_notes(self, job_id: str, tenant_id: str):
 
             # Parse with Claude Sonnet
             from app.workers.parse_worker import parse_field_notes
-            parsed_items = _run(parse_field_notes(raw_text))
+            parsed_items = parse_field_notes(raw_text)
 
             db.table("field_notes").update({
                 "parsed_items": parsed_items,
