@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.auth import get_current_user
 
 TENANT = str(uuid.uuid4())
 JOB_ID = str(uuid.uuid4())
@@ -21,11 +22,13 @@ client = TestClient(app)
 
 
 def _auth(user):
+    app.dependency_overrides[get_current_user] = lambda: user
     patcher = patch('app.auth.get_current_user', return_value=user)
     patcher.start()
 
 
 def teardown_function():
+    app.dependency_overrides.clear()
     patch.stopall()
 
 

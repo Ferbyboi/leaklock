@@ -6,6 +6,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
+from app.auth import get_current_user
 
 TENANT_A = str(uuid.uuid4())
 TENANT_B = str(uuid.uuid4())
@@ -22,12 +23,17 @@ client = TestClient(app)
 
 
 def _auth_override(user):
-    """Patch get_current_user at the module level so require_role closures see it."""
+    """Override auth for all route patterns:
+    - dependency_overrides: bypasses Security(get_current_user) in list/get routes
+    - patch: makes require_role closures see the mock via module-level name lookup
+    """
+    app.dependency_overrides[get_current_user] = lambda: user
     patcher = patch('app.auth.get_current_user', return_value=user)
     patcher.start()
 
 
 def teardown_function():
+    app.dependency_overrides.clear()
     patch.stopall()
 
 
