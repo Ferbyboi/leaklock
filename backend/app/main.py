@@ -8,9 +8,16 @@ sentry_sdk.init(dsn=os.getenv("SENTRY_DSN"), traces_sample_rate=0.1)
 
 app = FastAPI(title="LeakLock API", version="0.1.0")
 
+_frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
+_cors_origins = list({
+    "http://localhost:3000",
+    "https://leaklock.io",
+    _frontend_url,
+})
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://leaklock.io", "http://localhost:3000"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

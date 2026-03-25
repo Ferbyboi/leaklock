@@ -7,6 +7,8 @@ import jwt
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
+# Supabase JWT secret — found in Dashboard → Settings → API → JWT Secret
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
 
 security = HTTPBearer()
 
@@ -21,12 +23,24 @@ def get_current_user(
     """Validate Supabase JWT and extract tenant_id + role from claims."""
     token = credentials.credentials
     try:
-        # Decode without verification first to get the header
-        payload = jwt.decode(
-            token,
-            options={"verify_signature": False},
-            algorithms=["HS256"],
-        )
+        if SUPABASE_JWT_SECRET:
+            payload = jwt.decode(
+                token,
+                SUPABASE_JWT_SECRET,
+                algorithms=["HS256"],
+                audience="authenticated",
+            )
+        else:
+            # Fallback for local dev without secret set — log warning
+            import logging
+            logging.getLogger(__name__).warning(
+                "SUPABASE_JWT_SECRET not set — skipping JWT signature verification"
+            )
+            payload = jwt.decode(
+                token,
+                options={"verify_signature": False},
+                algorithms=["HS256"],
+            )
     except jwt.InvalidTokenError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,

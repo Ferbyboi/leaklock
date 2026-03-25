@@ -1,6 +1,6 @@
 """
 End-to-end pipeline tests.
-Tests the full flow: webhook → Trigger.dev forward → job ingestion → parse → match → alert.
+Tests the full flow: webhook → job ingestion → parse → match → alert.
 All external calls (Supabase, Celery, Trigger.dev) are mocked.
 """
 import uuid
@@ -11,6 +11,20 @@ from fastapi.testclient import TestClient
 from app.main import app
 
 client = TestClient(app)
+
+
+def _make_db_mock(job_id: str):
+    """Return a Supabase client mock that returns job_id on upsert."""
+    db = MagicMock()
+    # jobs.upsert().select().single().execute() → {"id": job_id}
+    (db.table.return_value
+       .upsert.return_value
+       .select.return_value
+       .single.return_value
+       .execute.return_value) = MagicMock(data={"id": job_id})
+    # field_notes.insert().execute() and draft_invoices.insert().execute()
+    db.table.return_value.insert.return_value.execute.return_value = MagicMock(data={})
+    return db
 
 TENANT = str(uuid.uuid4())
 JOB_ID = str(uuid.uuid4())
@@ -54,12 +68,27 @@ JOBBER_PAYLOAD_NOT_COMPLETED = {
 # ── Webhook endpoint tests ─────────────────────────────────────────────────────
 
 def test_generic_webhook_accepted():
-    with patch("app.routers.webhooks.send_trigger_event", new_callable=AsyncMock) as mock_ev:
-        mock_ev.return_value = {"id": "evt_123"}
+    """Generic webhook directly ingests into Supabase and queues Celery — no Trigger.dev."""
+    mock_db = _make_db_mock(JOB_ID)
+    with patch("app.routers.webhooks.get_db", return_value=mock_db), \
+         patch("app.workers.tasks.process_field_notes.delay") as mock_delay:
         resp = client.post("/webhooks/generic", json=GENERIC_PAYLOAD)
     assert resp.status_code == 200
-    assert resp.json()["received"] is True
-    assert resp.json()["crm_job_id"] == "JOB-001"
+    body = resp.json()
+    assert body["received"] is True
+    assert body["crm_job_id"] == "JOB-001"
+    assert body["job_id"] == JOB_ID
+
+
+def test_generic_webhook_queues_celery():
+    """Celery process_field_notes task is queued after ingestion."""
+    mock_db = _make_db_mock(JOB_ID)
+    with patch("app.routers.webhooks.get_db", return_value=mock_db), \
+         patch("app.workers.tasks.process_field_notes") as mock_task:
+        mock_task.delay = MagicMock()
+        resp = client.post("/webhooks/generic", json=GENERIC_PAYLOAD)
+    assert resp.status_code == 200
+    mock_task.delay.assert_called_once_with(JOB_ID, GENERIC_PAYLOAD["tenant_id"])
 
 
 def test_jobber_webhook_forwarded():
