@@ -20,7 +20,7 @@ async def review_reconciliation(
     job_id: UUID,
     result_id: UUID,
     body: AuditorAction,
-    user: dict = Security(require_role("admin", "auditor", "manager")),
+    user: dict = Security(require_role("owner", "auditor")),
 ):
     """
     Auditor reviews a reconciliation result.
@@ -62,7 +62,7 @@ async def review_reconciliation(
         track_false_positive(user["tenant_id"], str(job_id), user["user_id"])
 
     elif body.action == "override_approve":
-        if user["role"] not in ("admin",):
+        if user["role"] not in ("owner",):
             raise HTTPException(status_code=403, detail="Only admins can override-approve")
         supabase.table("jobs").update({
             "status": "approved",
@@ -83,7 +83,7 @@ async def review_reconciliation(
 
 @router.get("/reconciliation/dashboard")
 async def reconciliation_dashboard(
-    user: dict = Security(require_role("admin", "auditor", "manager")),
+    user: dict = Security(require_role("owner", "auditor")),
 ):
     """
     Auditor dashboard — all unreviewed discrepancies for this tenant.
