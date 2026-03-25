@@ -30,9 +30,10 @@ def health():
     return {"status": "ok"}
 
 
-from app.routers import jobs, webhooks, billing, reconciliation
+from app.routers import jobs, webhooks, billing, reconciliation, onboarding
 
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(webhooks.router, tags=["webhooks"])
 app.include_router(billing.router, tags=["billing"])
 app.include_router(reconciliation.router, tags=["reconciliation"])
+app.include_router(onboarding.router, tags=["onboarding"])

@@ -1,0 +1,69 @@
+"""Tenant onboarding — creates tenant record and provisions user app_metadata."""
+import sentry_sdk
+import jwt
+from fastapi import APIRouter, HTTPException, Security
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
+
+from app.auth import get_supabase, _decode_token
+
+router = APIRouter()
+security = HTTPBearer()
+
+
+class OnboardRequest(BaseModel):
+    company_name: str
+
+
+@router.post("/onboard")
+async def onboard_tenant(
+    body: OnboardRequest,
+    credentials: HTTPAuthorizationCredentials = Security(security),
+):
+    """
+    Called immediately after Supabase signUp().
+    Creates tenant row + sets app_metadata (tenant_id, user_role=owner).
+    Frontend must call supabase.auth.refreshSession() after this to pick up new claims.
+    """
+    token = credentials.credentials
+    try:
+        payload = _decode_token(token)
+    except jwt.InvalidTokenError as e:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")
+
+    user_id = payload.get("sub")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Token missing sub claim")
+
+    # Idempotency — user already onboarded
+    app_meta = payload.get("app_metadata") or {}
+    existing_tenant_id = payload.get("tenant_id") or app_meta.get("tenant_id")
+    if existing_tenant_id:
+        return {"tenant_id": existing_tenant_id, "already_onboarded": True}
+
+    supabase = get_supabase()
+
+    # Create tenant row
+    tenant_res = (
+        supabase.table("tenants")
+        .insert({"name": body.company_name})
+        .execute()
+    )
+    if not tenant_res.data:
+        raise HTTPException(status_code=500, detail="Failed to create tenant")
+
+    tenant_id = tenant_res.data[0]["id"]
+
+    # Set app_metadata on the Supabase user via Admin API
+    supabase.auth.admin.update_user_by_id(
+        user_id,
+        {"app_metadata": {"tenant_id": tenant_id, "user_role": "owner"}},
+    )
+
+    sentry_sdk.set_context("onboarding", {
+        "tenant_id": tenant_id,
+        "user_id": user_id,
+        "company_name": body.company_name,
+    })
+
+    return {"tenant_id": tenant_id, "company_name": body.company_name}
