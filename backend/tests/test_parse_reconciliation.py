@@ -1,11 +1,11 @@
 """Tests for /jobs/{id}/parse and /jobs/{id}/reconciliation routes."""
 import uuid
+import jwt
 from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
 from app.main import app
-from app.auth import get_current_user
 
 TENANT = str(uuid.uuid4())
 JOB_ID = str(uuid.uuid4())
@@ -14,15 +14,19 @@ TASK_ID = str(uuid.uuid4())
 ADMIN = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT, "role": "admin"}
 VIEWER = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT, "role": "viewer"}
 
+_FAKE_TOKEN = jwt.encode({"sub": "u"}, "x", algorithm="HS256")
+_AUTH = {"Authorization": f"Bearer {_FAKE_TOKEN}"}
+
 client = TestClient(app)
 
 
 def _auth(user):
-    app.dependency_overrides[get_current_user] = lambda: user
+    patcher = patch('app.auth.get_current_user', return_value=user)
+    patcher.start()
 
 
 def teardown_function():
-    app.dependency_overrides.clear()
+    patch.stopall()
 
 
 # ── /parse ────────────────────────────────────────────────────────────────────
@@ -36,13 +40,13 @@ def test_trigger_parse_queues_celery():
     mock_task.id = TASK_ID
 
     with patch("app.routers.jobs.get_supabase") as mock_sb, \
-         patch("app.routers.jobs.process_field_notes") as mock_pfn:
+         patch("app.workers.tasks.process_field_notes") as mock_pfn:
         mock_sb.return_value.table.return_value \
             .select.return_value.eq.return_value.eq.return_value \
             .single.return_value.execute.return_value = fetch_result
         mock_pfn.delay.return_value = mock_task
 
-        resp = client.post(f"/jobs/{JOB_ID}/parse")
+        resp = client.post(f"/jobs/{JOB_ID}/parse", headers=_AUTH)
 
     assert resp.status_code == 200
     assert resp.json()["queued"] is True
@@ -51,7 +55,7 @@ def test_trigger_parse_queues_celery():
 
 def test_trigger_parse_requires_admin():
     _auth(VIEWER)
-    resp = client.post(f"/jobs/{JOB_ID}/parse")
+    resp = client.post(f"/jobs/{JOB_ID}/parse", headers=_AUTH)
     assert resp.status_code == 403
 
 
@@ -65,7 +69,7 @@ def test_trigger_parse_job_not_found():
             .select.return_value.eq.return_value.eq.return_value \
             .single.return_value.execute.return_value = fetch_result
 
-        resp = client.post(f"/jobs/{JOB_ID}/parse")
+        resp = client.post(f"/jobs/{JOB_ID}/parse", headers=_AUTH)
     assert resp.status_code == 404
 
 
