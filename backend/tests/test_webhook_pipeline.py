@@ -16,12 +16,10 @@ client = TestClient(app)
 def _make_db_mock(job_id: str):
     """Return a Supabase client mock that returns job_id on upsert."""
     db = MagicMock()
-    # jobs.upsert().select().single().execute() → {"id": job_id}
+    # jobs.upsert().execute() → data=[{"id": job_id}]
     (db.table.return_value
        .upsert.return_value
-       .select.return_value
-       .single.return_value
-       .execute.return_value) = MagicMock(data={"id": job_id})
+       .execute.return_value) = MagicMock(data=[{"id": job_id}])
     # field_notes.insert().execute() and draft_invoices.insert().execute()
     db.table.return_value.insert.return_value.execute.return_value = MagicMock(data={})
     return db

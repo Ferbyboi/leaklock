@@ -59,13 +59,11 @@ def _ingest_job(payload_dict: dict) -> str:
             "status":        "pending_invoice",
             "match_status":  "pending",
         })
-        .select("id")
-        .single()
         .execute()
     )
     if not job_res.data:
         raise RuntimeError(f"Failed to upsert job {crm_job_id}")
-    job_id = job_res.data["id"]
+    job_id = job_res.data[0]["id"]
 
     # 2. Store field notes
     db.table("field_notes").insert({
