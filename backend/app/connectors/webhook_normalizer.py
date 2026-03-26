@@ -305,6 +305,164 @@ def normalize_housecallpro(payload: dict, tenant_id: str) -> dict:
     return out
 
 
+# ── Toast POS ─────────────────────────────────────────────────────────────────
+
+def normalize_toast(payload: dict, tenant_id: str) -> dict:
+    """Normalize a Toast POS ``order_completed`` or ``check_closed`` webhook payload.
+
+    Toast sends restaurant order/check data.  Line items live under
+    ``order.checks[].selections`` and carry modifiers as nested arrays.
+
+    Key field names
+    ---------------
+    order.guid                              → crm_job_id
+    order.checks[0].customer               → customer_name
+    order.restaurantName / order.diningArea → address
+    order.createdDate                       → scheduled_date
+    order.server / order.openedBy           → technician_name
+    order.checks[0].selections[]            → line_items
+    """
+    out = _empty_job(tenant_id, payload)
+
+    order = payload.get("order") or payload
+    checks = order.get("checks") or []
+    first_check = checks[0] if checks else {}
+    customer = first_check.get("customer") or {}
+
+    out["crm_job_id"] = _safe_str(
+        order.get("guid") or order.get("externalId") or order.get("id")
+    )
+
+    out["customer_name"] = _safe_str(
+        customer.get("firstName", "") + " " + customer.get("lastName", "")
+    ).strip() or _safe_str(customer.get("email"), "Guest")
+
+    restaurant = _safe_str(order.get("restaurantName") or order.get("diningArea", {}).get("name") if isinstance(order.get("diningArea"), dict) else order.get("diningArea"))
+    out["address"] = restaurant or "Restaurant"
+
+    out["scheduled_date"] = _safe_str(
+        order.get("createdDate") or order.get("openedDate")
+    )
+
+    server = order.get("server") or order.get("openedBy") or {}
+    out["technician_name"] = _safe_str(
+        server.get("firstName", "") + " " + server.get("lastName", "")
+    ).strip() if isinstance(server, dict) else _safe_str(server)
+
+    # Status mapping from Toast order status
+    toast_status = _safe_str(order.get("displayState") or order.get("voided")).lower()
+    if toast_status in ("true", "voided"):
+        out["status"] = "cancelled"
+    elif "closed" in toast_status or "paid" in toast_status:
+        out["status"] = "pending_invoice"
+    else:
+        out["status"] = "pending"
+
+    # Line items from check selections
+    raw_items = first_check.get("selections") or []
+    out["line_items"] = [
+        {
+            "description": _safe_str(
+                i.get("displayName") or i.get("name") or i.get("itemGroupName"), "Unknown"
+            ),
+            "quantity": _safe_float(i.get("quantity"), 1.0),
+            "unit_price": _safe_float(i.get("price") or i.get("unitOfMeasure")),
+        }
+        for i in raw_items
+    ]
+
+    return out
+
+
+# ── Square ────────────────────────────────────────────────────────────────────
+
+def normalize_square(payload: dict, tenant_id: str) -> dict:
+    """Normalize a Square ``order.completed`` or ``payment.completed`` webhook payload.
+
+    Square wraps event data under a top-level ``data.object`` key.
+
+    Key field names
+    ---------------
+    data.object.order.id                    → crm_job_id
+    data.object.order.fulfillments[0]       → customer/address info
+    data.object.order.line_items[]          → line_items
+    data.object.order.created_at            → scheduled_date
+    merchant_id                             → used for tenant lookup
+    """
+    out = _empty_job(tenant_id, payload)
+
+    data_obj = payload.get("data", {}).get("object", {})
+    order = data_obj.get("order") or data_obj.get("payment") or payload
+
+    out["crm_job_id"] = _safe_str(
+        order.get("id") or payload.get("event_id")
+    )
+
+    # Customer info lives in fulfillments for delivery/pickup orders
+    fulfillments = order.get("fulfillments") or []
+    fulfillment = fulfillments[0] if fulfillments else {}
+    fulfillment_details = (
+        fulfillment.get("pickup_details")
+        or fulfillment.get("delivery_details")
+        or {}
+    )
+    recipient = fulfillment_details.get("recipient") or {}
+
+    out["customer_name"] = _safe_str(
+        recipient.get("display_name")
+        or recipient.get("email_address")
+        or "Guest"
+    )
+
+    # Address from pickup/delivery
+    address_obj = recipient.get("address") or {}
+    if isinstance(address_obj, dict):
+        parts = [
+            address_obj.get("address_line_1", ""),
+            address_obj.get("locality", ""),
+            address_obj.get("administrative_district_level_1", ""),
+            address_obj.get("postal_code", ""),
+        ]
+        out["address"] = ", ".join(p for p in parts if p).strip()
+    else:
+        out["address"] = _safe_str(address_obj)
+
+    out["scheduled_date"] = _safe_str(
+        order.get("created_at") or order.get("updated_at")
+    )
+
+    # Square doesn't have a direct "technician" concept — use location or cashier
+    out["technician_name"] = _safe_str(
+        order.get("location_id") or payload.get("merchant_id", "")
+    )
+
+    # Status mapping from Square order state
+    sq_state = _safe_str(order.get("state")).upper()
+    state_map = {
+        "COMPLETED": "pending_invoice",
+        "OPEN": "in_progress",
+        "CANCELED": "cancelled",
+    }
+    out["status"] = state_map.get(sq_state, "pending")
+
+    # Line items
+    raw_items = order.get("line_items") or []
+    out["line_items"] = [
+        {
+            "description": _safe_str(
+                i.get("name") or i.get("variation_name"), "Unknown"
+            ),
+            "quantity": _safe_float(i.get("quantity"), 1.0),
+            "unit_price": _safe_float(
+                (i.get("base_price_money") or {}).get("amount", 0)
+            ) / 100,  # Square uses cents
+        }
+        for i in raw_items
+    ]
+
+    return out
+
+
 # ── Generic fallback ──────────────────────────────────────────────────────────
 
 def normalize_generic(payload: dict, tenant_id: str) -> dict:

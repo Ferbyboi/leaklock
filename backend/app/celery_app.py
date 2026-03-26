@@ -1,5 +1,6 @@
 import os
 from celery import Celery
+from celery.schedules import crontab
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
@@ -30,17 +31,32 @@ celery_app.conf.update(
     # ── Celery Beat periodic schedule ─────────────────────────────────────────
     # Per cost rules: batch low-value jobs every 4 hours instead of real-time.
     beat_schedule={
+        # Per cost rules: batch low-value jobs every 4 hours instead of real-time
         "batch-pending-jobs-every-4h": {
             "task": "tasks.batch_process_pending_jobs",
-            "schedule": 4 * 60 * 60,  # every 4 hours
+            "schedule": 4 * 60 * 60,
         },
+        # KPI tracking: alert if false positive rate > 5%
         "check-fp-rate-daily": {
             "task": "tasks.check_false_positive_rate",
-            "schedule": 24 * 60 * 60,  # every 24 hours
+            "schedule": 24 * 60 * 60,
         },
+        # Housekeeping: delete acknowledged alerts older than 90 days
         "cleanup-old-alerts-nightly": {
             "task": "tasks.cleanup_old_alerts",
-            "schedule": 24 * 60 * 60,  # every 24 hours
+            "schedule": 24 * 60 * 60,
+        },
+        # Priority 4: "You Forgot Something" — 10 PM UTC daily
+        # Checks required_daily_checks from niche schema; texts owner if any missing
+        "daily-check-reminder-10pm": {
+            "task": "tasks.send_daily_check_reminders",
+            "schedule": crontab(hour=22, minute=0),
+        },
+        # Priority 7: "Money You Almost Lost" — Every Friday at 18:00 UTC (noon CDT)
+        # Weekly digest email with jobs, leaks caught, revenue recovered
+        "weekly-money-email-friday": {
+            "task": "tasks.send_weekly_money_email",
+            "schedule": crontab(hour=18, minute=0, day_of_week=5),
         },
     },
 )

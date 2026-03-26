@@ -129,19 +129,29 @@ async def global_exception_handler(request, exc):
 from app.routers import jobs, webhooks, billing, reconciliation, onboarding, reports, alerts, team, notifications
 from app.routers import webhooks_jobber
 from app.routers import ocr
+from app.routers import diagnostic
+from app.routers import insurance_letter
+from app.routers import twilio_sms
 from app.connectors import servicetitan as connector_servicetitan
 from app.connectors import housecallpro as connector_housecallpro
+from app.connectors import toast as connector_toast
+from app.connectors import square as connector_square
 
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(webhooks.router, tags=["webhooks"])
 app.include_router(webhooks_jobber.router, tags=["webhooks"])
 app.include_router(connector_servicetitan.router, tags=["webhooks"])
 app.include_router(connector_housecallpro.router, tags=["webhooks"])
+app.include_router(connector_toast.router, tags=["webhooks"])
+app.include_router(connector_square.router, tags=["webhooks"])
 app.include_router(billing.router, tags=["billing"])
 app.include_router(reconciliation.router, tags=["reconciliation"])
 app.include_router(onboarding.router, tags=["onboarding"])
 app.include_router(reports.router)
+app.include_router(insurance_letter.router)
 app.include_router(alerts.router, tags=["alerts"])
 app.include_router(team.router, tags=["team"])
 app.include_router(notifications.router, tags=["notifications"])
 app.include_router(ocr.router, tags=["ocr"])
+app.include_router(diagnostic.router, tags=["diagnostic"])
+app.include_router(twilio_sms.router)
