@@ -252,9 +252,9 @@ async def oauth_callback(
             ).eq("id", tenant_id).execute()
 
     except Exception as exc:
-        logger.error("Failed to store OAuth tokens for %s: %s", provider, exc)
+        logger.error("Failed to store OAuth tokens for %s: %s", provider, exc, exc_info=True)
         sentry_sdk.capture_exception(exc)
-        raise HTTPException(status_code=500, detail="Failed to store OAuth tokens")
+        raise HTTPException(status_code=500, detail=f"Failed to store OAuth tokens: {exc}")
 
     # Redirect back to frontend integrations page
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
