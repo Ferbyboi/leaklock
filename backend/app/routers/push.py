@@ -60,7 +60,7 @@ async def subscribe_push(
     """Register a push subscription endpoint for the authenticated user."""
     supabase = get_supabase()
     tenant_id = user["tenant_id"]
-    user_id = user["sub"]
+    user_id = user["user_id"]
 
     try:
         result = (
@@ -99,7 +99,7 @@ async def unsubscribe_push(
 
     try:
         supabase.table("push_subscriptions").delete().eq(
-            "user_id", user["sub"]
+            "user_id", user["user_id"]
         ).eq("endpoint", body.endpoint).execute()
         return {"success": True}
 

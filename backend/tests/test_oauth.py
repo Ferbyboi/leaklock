@@ -9,7 +9,7 @@ from app.auth import get_current_user, get_supabase
 
 AUTH_HEADERS = {"Authorization": "Bearer test-token"}
 
-USER = {"sub": "user-1", "tenant_id": "tenant-1", "role": "owner"}
+USER = {"user_id": "user-1", "tenant_id": "tenant-1", "role": "owner"}
 
 
 @pytest.fixture(autouse=True)

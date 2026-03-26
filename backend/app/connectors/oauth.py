@@ -112,7 +112,7 @@ async def oauth_connect(
     state = secrets.token_urlsafe(32)
     _oauth_states[state] = {
         "tenant_id": user["tenant_id"],
-        "user_id": user["sub"],
+        "user_id": user["user_id"],
         "provider": provider,
     }
 
@@ -183,9 +183,10 @@ async def oauth_callback(
         or tokens.get("realm_id")
     )
 
+    from datetime import datetime, timedelta, timezone
+
     expires_at = None
     if expires_in:
-        from datetime import datetime, timedelta, timezone
         expires_at = (datetime.now(timezone.utc) + timedelta(seconds=int(expires_in))).isoformat()
 
     # Store in DB
@@ -201,7 +202,7 @@ async def oauth_callback(
                 "expires_at": expires_at,
                 "scopes": config["scopes"],
                 "merchant_id": merchant_id,
-                "updated_at": "now()",
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             },
             on_conflict="tenant_id,provider",
         ).execute()

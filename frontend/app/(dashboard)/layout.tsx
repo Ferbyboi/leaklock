@@ -59,6 +59,7 @@ export default async function DashboardLayout({
     { href: '/billing',      label: 'Billing',      icon: '⊟',  roles: ['owner'] },
     { href: '/schedule',     label: 'Schedule',     icon: '⊡',  roles: ['owner', 'auditor', 'tech'] },
     { href: '/settings',     label: 'Settings',     icon: '⊜',  roles: ['owner', 'auditor', 'tech'] },
+    { href: '/settings/integrations', label: 'Integrations', icon: '⊗', roles: ['owner'] },
     { href: '/settings/api', label: 'API Access',   icon: '⊐',  roles: ['owner'] },
   ].filter((l) => l.roles.includes(role));
 
