@@ -1,0 +1,82 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [master]
+
+jobs:
+  # ──────────────────────────────────────────────
+  # Job 1: Backend — pytest with full env mocks
+  # ──────────────────────────────────────────────
+  backend-tests:
+    name: Backend Tests (Python 3.12)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: backend/requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run pytest
+        env:
+          # Supabase
+          SUPABASE_URL: http://localhost:54321
+          SUPABASE_ANON_KEY: test-key
+          SUPABASE_SERVICE_KEY: test-key
+          SUPABASE_JWT_SECRET: test-jwt-secret
+          SUPABASE_AUTH_BYPASS: "true"
+          # Redis / Celery
+          REDIS_URL: redis://localhost:6379/0
+          # Stripe
+          STRIPE_SECRET_KEY: sk_test_fake
+          STRIPE_WEBHOOK_SECRET: whsec_fake
+          # AI / integrations
+          ANTHROPIC_API_KEY: test-key
+          TRIGGER_API_KEY: test-trigger-key
+          # App URLs
+          FRONTEND_URL: http://localhost:3000
+          BACKEND_URL: http://localhost:8000
+          # Observability — silence in CI
+          SENTRY_DSN: ""
+        run: pytest tests/ -v --tb=short --cov=app --cov-report=term-missing
+
+  # ──────────────────────────────────────────────
+  # Job 2: Frontend — TypeScript type-check
+  # ──────────────────────────────────────────────
+  frontend-typecheck:
+    name: Frontend Typecheck (Node 20)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: TypeScript type-check
+        run: npx tsc --noEmit
