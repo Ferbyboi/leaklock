@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 
 interface ApiKey {
@@ -49,7 +49,7 @@ function CopyButton({ text }: { text: string }) {
 }
 
 export default function ApiSettingsPage() {
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
 
   const [keys, setKeys]         = useState<ApiKey[]>([]);
   const [loading, setLoading]   = useState(true);

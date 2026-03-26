@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import type { PlanTier } from "@/lib/design-tokens";
 import { PLAN_RANK } from "@/lib/design-tokens";
@@ -45,7 +45,7 @@ export default function BillingPage() {
   const [checkingOut, setCheckingOut] = useState<PlanTier | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
 
   useEffect(() => {
     async function load() {

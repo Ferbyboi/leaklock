@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 
 type NotifPrefs = {
@@ -41,7 +41,7 @@ export default function SettingsPage() {
   const [profileSaved, setProfileSaved]   = useState(false);
   const [profileError, setProfileError]   = useState<string | null>(null);
 
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
 
   const loadSettings = useCallback(async () => {
     const { data: { user } } = await sb.auth.getUser();

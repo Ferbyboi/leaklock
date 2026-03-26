@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabase";
 
 interface TeamMember {
@@ -37,7 +37,7 @@ export default function TeamPage() {
   const [inviteError, setInviteError] = useState<string | null>(null);
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
 
   const loadMembers = useCallback(async () => {
     const { data: { user } } = await sb.auth.getUser();

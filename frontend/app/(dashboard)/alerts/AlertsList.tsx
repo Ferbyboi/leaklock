@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { createClient } from "@/lib/supabase";
 import Link from "next/link";
 
@@ -30,7 +30,7 @@ export function AlertsList() {
   const [filter, setFilter] = useState<Filter>("unacknowledged");
   const [acknowledging, setAcknowledging] = useState<string | null>(null);
 
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
 
   const loadAlerts = useCallback(async () => {
     let q = sb

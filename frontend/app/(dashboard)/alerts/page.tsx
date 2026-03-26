@@ -9,10 +9,13 @@ export default async function AlertsPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect('/login');
 
+  const tenantId = user.app_metadata?.tenant_id ?? user.user_metadata?.tenant_id ?? '';
+
   // Count unacknowledged for the header
   const { count } = await supabase
     .from("alerts")
     .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenantId)
     .is("acknowledged_at", null);
 
   return (

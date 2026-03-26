@@ -52,7 +52,7 @@ function JobsContent() {
   const [approving, setApproving] = useState<string | null>(null);
   const LIMIT = 25;
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL!;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? '';
 
   async function getToken() {
     const sb = createClient();

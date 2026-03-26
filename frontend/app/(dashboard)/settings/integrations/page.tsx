@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase";
 import { useSearchParams } from "next/navigation";
 
@@ -47,7 +47,7 @@ export default function IntegrationsPage() {
   const searchParams = useSearchParams();
   const justConnected = searchParams.get("connected");
 
-  const sb = createClient();
+  const sb = useMemo(() => createClient(), []);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
   useEffect(() => {
