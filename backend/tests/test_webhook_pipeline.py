@@ -89,26 +89,6 @@ def test_generic_webhook_queues_celery():
     mock_task.delay.assert_called_once_with(JOB_ID, GENERIC_PAYLOAD["tenant_id"])
 
 
-def test_jobber_webhook_forwarded():
-    with patch("app.routers.webhooks.send_trigger_event", new_callable=AsyncMock) as mock_ev:
-        mock_ev.return_value = {"id": "evt_456"}
-        resp = client.post(
-            "/webhooks/jobber",
-            json=JOBBER_PAYLOAD,
-            headers={"X-Tenant-ID": TENANT},
-        )
-    assert resp.status_code == 200
-    assert resp.json()["received"] is True
-    mock_ev.assert_called_once()
-    call_args = mock_ev.call_args[0]
-    assert call_args[0] == "webhook.jobber"
-    assert call_args[1]["tenantId"] == TENANT
-
-
-def test_jobber_webhook_missing_tenant_header():
-    resp = client.post("/webhooks/jobber", json=JOBBER_PAYLOAD)
-    assert resp.status_code == 400
-
 
 def test_servicetitan_webhook_forwarded():
     st_payload = {

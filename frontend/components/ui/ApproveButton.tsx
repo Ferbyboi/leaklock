@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 export default function ApproveButton({ jobId }: { jobId: string }) {
   const [loading, setLoading] = useState(false);
@@ -11,7 +12,11 @@ export default function ApproveButton({ jobId }: { jobId: string }) {
     setLoading(true);
     const res = await fetch(`/api/jobs/${jobId}/approve`, { method: 'POST' });
     if (res.ok) {
+      toast.success('Invoice approved');
       router.refresh();
+    } else {
+      const body = await res.json().catch(() => ({}));
+      toast.error(body.detail ?? 'Could not approve invoice');
     }
     setLoading(false);
   }

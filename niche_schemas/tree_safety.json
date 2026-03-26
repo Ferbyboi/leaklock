@@ -1,0 +1,27 @@
+{
+  "tenant_type": "tree_service",
+  "version": "1.0.0",
+  "retention_years": 5,
+  "regulatory_source": "OSHA 1910.269, OSHA 1910.266, ANSI Z133.1",
+  "ai_system_prompt": "You are an OSHA tree work safety AI. Extract safety confirmations from the transcript: tie-off points checked (yes/no), ground zone cleared (yes/no), PPE confirmed (yes/no), power line proximity (yes/no/distance in feet). Also extract: tree species if mentioned, work performed, equipment used. Return JSON: {safety: {tie_off: bool, ground_zone: bool, ppe: bool, power_line_proximity_ft: number|null}, work: {description, equipment: [], tree_species?}}",
+  "photo_analysis_prompt": "Analyze this tree/work site photo. Detect: (1) Power lines within frame — flag High Risk if lines are within 10 feet of tree canopy. (2) PPE visible on workers (hardhat, eye protection, chainsaw chaps). (3) Ground zone hazards. Return JSON: {power_lines_detected: bool, estimated_distance_ft: number|null, ppe_visible: [], hazards: [], risk_level: 'low'|'medium'|'high'}",
+  "validation_rules": {
+    "min_power_line_distance_ft": 10,
+    "ppe_required": ["hardhat", "eye_protection", "chainsaw_chaps"],
+    "ground_zone_clearance_required": true,
+    "daily_safety_briefing_required": true,
+    "record_retention_years": 5
+  },
+  "alert_thresholds": {
+    "critical": ["power_line_proximity_violation", "ppe_missing", "ground_zone_not_cleared"],
+    "warning": ["approaching_power_line_limit", "equipment_maintenance_due"],
+    "info": ["daily_briefing_incomplete"]
+  },
+  "required_daily_checks": [
+    {"id": "safety_briefing", "label": "Daily safety briefing completed", "frequency": "daily"},
+    {"id": "ppe_check", "label": "All PPE inspected and worn", "frequency": "per_job"},
+    {"id": "power_line_survey", "label": "Power line proximity surveyed", "frequency": "per_job"},
+    {"id": "ground_zone", "label": "Ground zone cleared and marked", "frequency": "per_job"},
+    {"id": "equipment_inspection", "label": "Chainsaw/chipper inspection logged", "frequency": "daily"}
+  ]
+}

@@ -1,15 +1,17 @@
+import hashlib
+import hmac
 import os
 import logging
 import httpx
 from fastapi import APIRouter, Depends, Request, HTTPException
-from pydantic import BaseModel
-from typing import Optional
-
 from app.db import get_db
 from app.middleware.rate_limit import rate_limit_webhooks
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+SERVICETITAN_WEBHOOK_SECRET = os.getenv("SERVICETITAN_WEBHOOK_SECRET", "")
+WEBHOOK_SECRET = os.getenv("WEBHOOK_SECRET", "")
 
 TRIGGER_API_KEY = os.getenv("TRIGGER_API_KEY")
 TRIGGER_API_URL = os.getenv("TRIGGER_API_URL", "https://api.trigger.dev")
@@ -83,7 +85,10 @@ def _ingest_job(payload_dict: dict) -> str:
             "line_items": draft_invoice["line_items"],
         }).execute()
 
-    # 4. Queue Celery parse task
+    # 4. Queue Celery parse task.
+    # The upsert above handles dedup at the DB level.  The Celery task itself
+    # is idempotent (it checks parse_status before doing work), so queuing it
+    # on a repeated webhook is safe — it will no-op if already parsed.
     try:
         from app.workers.tasks import process_field_notes
         process_field_notes.delay(job_id, tenant_id)
@@ -93,41 +98,76 @@ def _ingest_job(payload_dict: dict) -> str:
     return job_id
 
 
-class GenericWebhookPayload(BaseModel):
-    crm_job_id:    str
-    tenant_id:     str
-    client_name:   str
-    tech_notes:    Optional[str] = None
-    photo_urls:    Optional[list[str]] = None
-    draft_invoice: Optional[dict] = None
+def _verify_servicetitan_signature(body: bytes, signature: str, secret: str) -> bool:
+    """Validate ServiceTitan HMAC-SHA256 webhook signature.
 
-
-@router.post("/webhooks/jobber", dependencies=[Depends(rate_limit_webhooks)])
-async def jobber_webhook(request: Request):
-    """Receive Jobber webhook and forward to Trigger.dev."""
-    body = await request.json()
-    tenant_id = request.headers.get("X-Tenant-ID")
-    if not tenant_id:
-        raise HTTPException(status_code=400, detail="Missing X-Tenant-ID header")
-
-    await send_trigger_event("webhook.jobber", {**body, "tenantId": tenant_id})
-    return {"received": True}
+    ServiceTitan signs the raw request body with the shared secret and sends
+    the hex digest in the X-ST-Signature header.
+    """
+    expected = hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()  # type: ignore[attr-defined]
+    return hmac.compare_digest(expected, signature)
 
 
 @router.post("/webhooks/servicetitan", dependencies=[Depends(rate_limit_webhooks)])
 async def servicetitan_webhook(request: Request):
-    """Receive ServiceTitan webhook and forward to Trigger.dev."""
-    body = await request.json()
+    """Receive ServiceTitan webhook — validates HMAC signature, forwards to Trigger.dev."""
+    body_bytes = await request.body()
+
+    if SERVICETITAN_WEBHOOK_SECRET:
+        signature = request.headers.get("X-ST-Signature", "")
+        if not signature or not _verify_servicetitan_signature(
+            body_bytes, signature, SERVICETITAN_WEBHOOK_SECRET
+        ):
+            logger.warning("ServiceTitan webhook signature mismatch from %s", request.client)
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
     tenant_id = request.headers.get("X-Tenant-ID")
     if not tenant_id:
         raise HTTPException(status_code=400, detail="Missing X-Tenant-ID header")
+
+    try:
+        import json
+        body = json.loads(body_bytes)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     await send_trigger_event("webhook.servicetitan", {**body, "tenantId": tenant_id})
     return {"received": True}
 
 
 @router.post("/webhooks/generic", dependencies=[Depends(rate_limit_webhooks)])
-async def generic_webhook(payload: GenericWebhookPayload):
-    """Generic webhook — directly ingests job into Supabase and queues Celery."""
-    job_id = _ingest_job(payload.model_dump())
-    return {"received": True, "crm_job_id": payload.crm_job_id, "job_id": job_id}
+async def generic_webhook(request: Request):
+    """Generic webhook — validates optional HMAC, ingests job into Supabase and queues Celery."""
+    body_bytes = await request.body()
+
+    # Optional HMAC validation — if WEBHOOK_SECRET is set, validate X-Webhook-Signature header
+    if WEBHOOK_SECRET:
+        signature = request.headers.get("X-Webhook-Signature", "")
+        if not signature or not _verify_servicetitan_signature(body_bytes, signature, WEBHOOK_SECRET):
+            logger.warning("Generic webhook signature mismatch from %s", request.client)
+            raise HTTPException(status_code=401, detail="Invalid webhook signature")
+
+    try:
+        import json
+        body_dict = json.loads(body_bytes)
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
+
+    # Validate required fields
+    if not body_dict.get("crm_job_id") or not body_dict.get("tenant_id"):
+        raise HTTPException(status_code=400, detail="Missing required fields: crm_job_id, tenant_id")
+
+    # Support both client_name and customer_name field names
+    if "customer_name" in body_dict and "client_name" not in body_dict:
+        body_dict["client_name"] = body_dict["customer_name"]
+
+    if not body_dict.get("client_name"):
+        body_dict["client_name"] = "Unknown"
+
+    try:
+        job_id = _ingest_job(body_dict)
+    except Exception as exc:
+        logger.error("Generic webhook ingest failed: %s", exc)
+        raise HTTPException(status_code=500, detail=str(exc))
+
+    return {"received": True, "crm_job_id": body_dict["crm_job_id"], "job_id": job_id}

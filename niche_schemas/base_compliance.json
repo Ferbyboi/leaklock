@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "required_fields": ["tenant_id", "job_id", "recorded_at"],
+  "audit_log_required": true,
+  "timestamp_format": "ISO8601",
+  "data_retention_years": 7
+}

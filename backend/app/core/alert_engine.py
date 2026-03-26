@@ -1,6 +1,10 @@
+import asyncio
+import logging
 import os
 import sentry_sdk
 from app.db import get_db
+
+logger = logging.getLogger(__name__)
 
 ALERT_THRESHOLD_CENTS = int(os.getenv("ALERT_THRESHOLD_CENTS", "2500"))
 FRONTEND_URL = os.getenv("FRONTEND_URL", "https://app.leaklock.io")
@@ -37,7 +41,6 @@ async def fire_revenue_leak_alert(
         .execute()
     )
 
-    owner = owner_res.data[0] if owner_res.data else {}
     biz_name = (tenant_res.data or {}).get("name", "Your business")
 
     missing_lines = "\n".join(
@@ -59,14 +62,21 @@ async def fire_revenue_leak_alert(
         "match_status": "discrepancy",
     }).eq("id", job_id).eq("tenant_id", tenant_id).execute()
 
-    # Multi-channel notifications (best-effort — failures captured to Sentry)
-    if os.getenv("SLACK_BOT_TOKEN"):
+    # Slack is workspace-level — fires regardless of owner existence
+    if os.getenv("SLACK_WEBHOOK_URL"):
         try:
             await _send_slack(message)
         except Exception as e:
             sentry_sdk.capture_exception(e)
 
-    if owner.get("email") and os.getenv("SENDGRID_API_KEY"):
+    # Email and SMS require owner contact info
+    if not owner_res.data:
+        logger.warning("No owner found for tenant %s — skipping email/SMS notification", tenant_id)
+        return
+
+    owner = owner_res.data[0]
+
+    if owner.get("email") and os.getenv("RESEND_API_KEY"):
         try:
             await _send_email(owner["email"], biz_name, message)
         except Exception as e:
@@ -119,30 +129,34 @@ def track_false_positive(tenant_id: str, job_id: str, auditor_id: str):
 
 
 async def _send_slack(message: str):
-    from slack_sdk.web.async_client import AsyncWebClient
-    client = AsyncWebClient(token=os.getenv("SLACK_BOT_TOKEN"))
-    channel = os.getenv("SLACK_ALERTS_CHANNEL", "#revenue-alerts")
-    await client.chat_postMessage(channel=channel, text=message)
+    import httpx
+    webhook_url = os.getenv("SLACK_WEBHOOK_URL")
+    if not webhook_url:
+        return
+    async with httpx.AsyncClient(timeout=10) as client:
+        r = await client.post(webhook_url, json={"text": message})
+        r.raise_for_status()
 
 
 async def _send_email(to_email: str, biz_name: str, message: str):
-    import sendgrid
-    from sendgrid.helpers.mail import Mail
-    sg = sendgrid.SendGridAPIClient(api_key=os.getenv("SENDGRID_API_KEY"))
-    mail = Mail(
-        from_email=os.getenv("SENDGRID_FROM_EMAIL", "alerts@leaklock.io"),
-        to_emails=to_email,
-        subject=f"Unbilled Work Detected — {biz_name}",
-        plain_text_content=message,
-    )
-    sg.send(mail)
+    import resend
+    resend.api_key = os.getenv("RESEND_API_KEY")
+    payload = {
+        "from": os.getenv("RESEND_FROM_EMAIL", "alerts@leaklock.io"),
+        "to": [to_email],
+        "subject": f"Unbilled Work Detected — {biz_name}",
+        "text": message,
+    }
+    await asyncio.to_thread(resend.Emails.send, payload)
 
 
 async def _send_sms(to_phone: str, message: str):
     from twilio.rest import Client
     client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
-    client.messages.create(
+    from_number = os.getenv("TWILIO_FROM_NUMBER")
+    await asyncio.to_thread(
+        client.messages.create,
         body=message,
-        from_=os.getenv("TWILIO_FROM_PHONE"),
+        from_=from_number,
         to=to_phone,
     )

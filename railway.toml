@@ -12,3 +12,7 @@ healthcheckTimeout = 30
 [[services]]
 name = "worker"
 startCommand = "celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2 -Q default"
+
+[[services]]
+name = "beat"
+startCommand = "celery -A app.celery_app.celery_app beat --loglevel=info"

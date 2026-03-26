@@ -1,0 +1,35 @@
+{
+  "tenant_type": "restaurant",
+  "version": "1.0.0",
+  "retention_years": 3,
+  "regulatory_source": "FDA Food Code 2022, Chicago Municipal Code 7-38",
+  "ai_system_prompt": "You are a restaurant health code compliance AI. Extract every food item and its temperature in °F from the transcript. Classify each as safe or danger zone (cold items above 41°F = danger, hot items below 135°F = danger). Return JSON: {items: [{name, temp_f, zone: 'safe'|'danger', asset_location}], sanitizer_check?: {type, ppm}, grease_trap?: {fill_pct}}",
+  "photo_analysis_prompt": "Analyze this kitchen equipment photo. If grease trap: estimate fill percentage 0-100. If hood: rate cleanliness 1-10 and identify grease zones. If general kitchen: flag any visible health code violations. Return JSON: {type: 'grease_trap'|'hood'|'kitchen', findings: {}, compliance_status: 'pass'|'fail'|'warning'}",
+  "validation_rules": {
+    "chicken_min_internal_f": 165,
+    "ground_beef_min_internal_f": 155,
+    "fish_min_internal_f": 145,
+    "cold_holding_max_f": 41,
+    "hot_holding_min_f": 135,
+    "reheating_min_f": 165,
+    "grease_trap_max_fill_pct": 25,
+    "sanitizer_chlorine_min_ppm": 50,
+    "sanitizer_chlorine_max_ppm": 200,
+    "cooling_start_max_f": 135,
+    "cooling_2hr_max_f": 70,
+    "cooling_total_max_f": 41
+  },
+  "alert_thresholds": {
+    "critical": ["temp_danger_zone", "grease_trap_overflow"],
+    "warning": ["approaching_grease_trap_limit", "sanitizer_out_of_range"],
+    "info": ["daily_check_incomplete"]
+  },
+  "required_daily_checks": [
+    {"id": "line_check", "label": "Line check temps logged", "frequency": "twice_daily"},
+    {"id": "walk_in_temps", "label": "Walk-in cooler/freezer temps logged", "frequency": "twice_daily"},
+    {"id": "handwash_station", "label": "Handwash stations stocked and accessible", "frequency": "daily"},
+    {"id": "sanitizer_test", "label": "Sanitizer concentration tested and logged", "frequency": "daily"},
+    {"id": "date_labels", "label": "All items properly date-labeled", "frequency": "daily"},
+    {"id": "equipment_clean", "label": "Equipment surfaces cleaned and sanitized", "frequency": "daily"}
+  ]
+}

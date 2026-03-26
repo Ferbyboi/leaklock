@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { toast } from 'sonner';
 
 export default function BillingActions({ planId }: { planId: string }) {
   const [loading, setLoading] = useState(false);
@@ -12,8 +13,10 @@ export default function BillingActions({ planId }: { planId: string }) {
     if (res.ok) {
       const { checkout_url, portal_url } = await res.json();
       window.location.href = checkout_url ?? portal_url;
+    } else {
+      toast.error('Could not connect to billing — please try again');
+      setLoading(false);
     }
-    setLoading(false);
   }
 
   if (planId === 'portal') {

@@ -1,5 +1,6 @@
 """Reconciliation review routes — auditor actions on match results."""
 import sentry_sdk
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Security
 from pydantic import BaseModel
 from typing import Literal
@@ -43,11 +44,20 @@ async def review_reconciliation(
     if not result.data:
         raise HTTPException(status_code=404, detail="Reconciliation result not found")
 
-    # Update reconciliation result with auditor action (append-only metadata)
+    # Map auditor action to reconciliation_results status value
+    _ACTION_TO_STATUS = {
+        "false_positive": "false_positive",
+        "override_approve": "override_approved",
+        "confirm_leak": "confirmed",
+    }
+
+    # Update reconciliation result with auditor action + status
+    new_status = _ACTION_TO_STATUS.get(body.action, result.data["status"])
     supabase.table("reconciliation_results").update({
+        "status": new_status,
         "auditor_action": body.action,
         "auditor_id": user["user_id"],
-        "reviewed_at": "now()",
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", str(result_id)).eq("tenant_id", user["tenant_id"]).execute()
 
     # Act on the job based on decision
@@ -70,6 +80,17 @@ async def review_reconciliation(
         }).eq("id", str(job_id)).eq("tenant_id", user["tenant_id"]).execute()
 
     # confirm_leak: no status change — job stays frozen
+
+    # Audit log — append-only record of the review
+    from app.core.audit_log import log_action
+    log_action(
+        tenant_id=user["tenant_id"],
+        actor_id=user["user_id"],
+        action=f"reconciliation.{body.action}",
+        entity_type="reconciliation_result",
+        entity_id=str(result_id),
+        metadata={"job_id": str(job_id), "note": body.note},
+    )
 
     sentry_sdk.set_context("auditor_review", {
         "job_id": str(job_id),

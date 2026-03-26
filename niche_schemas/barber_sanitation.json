@@ -1,0 +1,27 @@
+{
+  "tenant_type": "barber",
+  "version": "1.0.0",
+  "retention_years": 7,
+  "regulatory_source": "State cosmetology board regulations, OSHA Bloodborne Pathogen Standard 1910.1030",
+  "ai_system_prompt": "You are a salon state board compliance AI. Extract: station number sanitized, timestamp, stylist name. If color formula is mentioned: extract client name, products used, ratios, processing time, developer volume. If chemical treatment (bleach, perm, relaxer, keratin, chemical straightener) is mentioned: flag for allergy waiver requirement. Return JSON: {type: 'sanitation'|'formula'|'treatment', data: {station_number?, stylist_name?, client_name?, products?: [], ratios?: {}, processing_time_min?: number, developer_volume?: string, waiver_required?: bool}}",
+  "photo_analysis_prompt": "Analyze this salon/barbershop station photo. Check: (1) Implements visibly stored in EPA-registered disinfectant solution. (2) Clean towels separated from used. (3) Chemical products properly labeled and stored. Return JSON: {disinfectant_visible: bool, implements_submerged: bool, towel_separation: bool, chemical_storage_compliant: bool, violations: [], compliance_status: 'pass'|'fail'|'warning'}",
+  "validation_rules": {
+    "sanitation_interval_minutes": 15,
+    "disinfectant_contact_time_minutes": 10,
+    "record_retention_years": 7,
+    "waiver_retention_years": 7,
+    "waiver_trigger_keywords": ["bleach", "perm", "relaxer", "keratin", "chemical straightener", "color", "developer"],
+    "required_fields": ["station_number", "sanitized_at"]
+  },
+  "alert_thresholds": {
+    "critical": ["waiver_missing_for_chemical_treatment", "sanitation_interval_exceeded"],
+    "warning": ["station_overdue_for_sanitation", "chemical_inventory_low"],
+    "info": ["daily_log_incomplete"]
+  },
+  "required_daily_checks": [
+    {"id": "station_sanitation", "label": "All stations sanitized and logged", "frequency": "per_client"},
+    {"id": "implement_disinfection", "label": "Implements in EPA disinfectant between clients", "frequency": "per_client"},
+    {"id": "chemical_inventory", "label": "Chemical inventory checked and stored properly", "frequency": "daily"},
+    {"id": "waiver_queue", "label": "All chemical treatment waivers signed before service", "frequency": "per_chemical_service"}
+  ]
+}

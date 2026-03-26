@@ -1,0 +1,25 @@
+{
+  "tenant_type": "hvac",
+  "version": "1.0.0",
+  "retention_years": 3,
+  "regulatory_source": "EPA 40 CFR Part 82, Section 608",
+  "ai_system_prompt": "You are an EPA 608 compliance AI for HVAC service. Extract: refrigerant type, quantity in lbs added/recovered, system asset ID, tech EPA certification number, pressure test readings in PSI. Flag any system where the annualized leak rate exceeds the threshold. Return JSON: {refrigerant_type, qty_lbs, action: 'added'|'recovered'|'leak_check', tech_epa_cert, pressure_psi, asset_id?, leak_rate_pct?}",
+  "photo_analysis_prompt": "Analyze this HVAC equipment photo. Identify: equipment type, visible refrigerant leaks (oil staining, corrosion), pressure gauge readings if visible, unit condition. Return JSON: {equipment_type, leak_indicators: [], pressure_readings: {}, condition: 'good'|'fair'|'poor', compliance_status: 'pass'|'fail'|'warning'}",
+  "validation_rules": {
+    "commercial_refrig_leak_threshold_pct": 20,
+    "industrial_process_leak_threshold_pct": 30,
+    "comfort_cooling_leak_threshold_pct": 10,
+    "record_retention_years": 3,
+    "required_fields": ["refrigerant_type", "qty_lbs", "tech_epa_cert"]
+  },
+  "alert_thresholds": {
+    "critical": ["leak_rate_exceeded", "missing_epa_cert"],
+    "warning": ["approaching_leak_threshold", "service_overdue"],
+    "info": ["quarterly_report_due"]
+  },
+  "required_daily_checks": [
+    {"id": "equipment_inspection", "label": "Visual equipment inspection completed", "frequency": "daily"},
+    {"id": "refrigerant_log", "label": "Refrigerant add/recover logged with EPA cert", "frequency": "per_service"},
+    {"id": "pressure_test", "label": "Pressure test results logged", "frequency": "per_service"}
+  ]
+}
