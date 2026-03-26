@@ -81,7 +81,7 @@ export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
   // ── 1. Auth gate ───────────────────────────────────────────────────────────
-  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password'];
+  const publicPaths = ['/login', '/signup', '/forgot-password', '/reset-password', '/diagnostic'];
   if (!user && !publicPaths.some(p => pathname.startsWith(p))) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
