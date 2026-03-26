@@ -12,21 +12,35 @@ router = APIRouter()
 @router.get("")
 async def list_jobs(
     status: Optional[str] = None,
+    search: Optional[str] = None,
+    limit: int = 50,
+    offset: int = 0,
     user: dict = Security(get_current_user),
 ):
-    """List all jobs for the authenticated tenant."""
+    """List jobs for the authenticated tenant with optional filtering and pagination."""
     supabase = get_supabase()
     query = (
         supabase.table("jobs")
-        .select("*, field_notes(*), draft_invoices(*)")
+        .select("*, field_notes(parse_status), reconciliation_results(status, estimated_leak_cents)", count="exact")
         .eq("tenant_id", user["tenant_id"])
         .order("created_at", desc=True)
+        .range(offset, offset + limit - 1)
     )
     if status:
         query = query.eq("status", status)
+    if search:
+        query = query.ilike("crm_job_id", f"%{search}%")
 
     result = query.execute()
-    return {"jobs": result.data, "count": len(result.data)}
+    total = result.count or 0
+    return {
+        "jobs": result.data or [],
+        "count": len(result.data or []),
+        "total": total,
+        "limit": limit,
+        "offset": offset,
+        "has_more": offset + limit < total,
+    }
 
 
 @router.get("/{job_id}")
@@ -52,40 +66,54 @@ async def get_job(
 @router.post("/{job_id}/approve")
 async def approve_job(
     job_id: UUID,
-    user: dict = Security(require_role("admin", "manager")),
+    user: dict = Security(require_role("owner", "auditor")),
 ):
     """Approve a job invoice — marks it as approved, tenant-scoped."""
     supabase = get_supabase()
 
-    # Fetch job first to verify ownership and current status
-    fetch = (
-        supabase.table("jobs")
-        .select("id, status, tenant_id")
-        .eq("id", str(job_id))
-        .eq("tenant_id", user["tenant_id"])
-        .single()
-        .execute()
-    )
-    if not fetch.data:
-        raise HTTPException(status_code=404, detail="Job not found")
-
-    job = fetch.data
-    if job["status"] == "approved":
-        raise HTTPException(status_code=409, detail="Job already approved")
-
-    if job["status"] == "frozen":
-        raise HTTPException(
-            status_code=409,
-            detail="Job is frozen due to revenue leak alert — resolve discrepancies first",
-        )
-
-    # Update status → approved
+    # Atomic conditional update — only succeeds if job is in 'pending_invoice' state.
+    # Requiring the exact status (not just "not frozen/approved") prevents races
+    # where the alert engine freezes the job between our check and the update.
     result = (
         supabase.table("jobs")
         .update({"status": "approved"})
         .eq("id", str(job_id))
         .eq("tenant_id", user["tenant_id"])
+        .eq("status", "pending_invoice")
         .execute()
+    )
+
+    if not result.data:
+        # Fetch to return a precise error — could be 404, frozen, or already approved
+        fetch = (
+            supabase.table("jobs")
+            .select("id, status")
+            .eq("id", str(job_id))
+            .eq("tenant_id", user["tenant_id"])
+            .single()
+            .execute()
+        )
+        if not fetch.data:
+            raise HTTPException(status_code=404, detail="Job not found")
+        if fetch.data["status"] == "approved":
+            raise HTTPException(status_code=409, detail="Job already approved")
+        if fetch.data["status"] == "frozen":
+            raise HTTPException(
+                status_code=409,
+                detail="Job is frozen due to revenue leak alert — resolve discrepancies first",
+            )
+        raise HTTPException(
+            status_code=409,
+            detail=f"Job cannot be approved in status '{fetch.data['status']}'",
+        )
+
+    from app.core.audit_log import log_action
+    log_action(
+        tenant_id=user["tenant_id"],
+        actor_id=user["user_id"],
+        action="job.approved",
+        entity_type="job",
+        entity_id=str(job_id),
     )
 
     sentry_sdk.set_context("job_approval", {
@@ -100,7 +128,7 @@ async def approve_job(
 @router.post("/{job_id}/parse")
 async def trigger_parse(
     job_id: UUID,
-    user: dict = Security(require_role("admin", "manager")),
+    user: dict = Security(require_role("owner", "auditor")),
 ):
     """Manually trigger field-note parsing for a job (re-queue Celery task)."""
     supabase = get_supabase()

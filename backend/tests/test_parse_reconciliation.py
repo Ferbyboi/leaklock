@@ -12,8 +12,8 @@ TENANT = str(uuid.uuid4())
 JOB_ID = str(uuid.uuid4())
 TASK_ID = str(uuid.uuid4())
 
-ADMIN = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT, "role": "admin"}
-VIEWER = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT, "role": "viewer"}
+ADMIN = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT, "role": "owner"}
+VIEWER = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT, "role": "tech"}
 
 _FAKE_TOKEN = jwt.encode({"sub": "u"}, "x", algorithm="HS256")
 _AUTH = {"Authorization": f"Bearer {_FAKE_TOKEN}"}

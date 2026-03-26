@@ -1,0 +1,26 @@
+{
+  "tenant_type": "landscaping",
+  "version": "1.0.0",
+  "retention_years": 3,
+  "regulatory_source": "EPA FIFRA, State pesticide application laws",
+  "ai_system_prompt": "You are an EPA pesticide/fertilizer compliance AI. Extract: product name, EPA registration number, quantity applied, dilution ratio, application method, target area/zone. Auto-log current weather conditions and timestamp. Return JSON: {product, epa_reg_number, qty, unit, dilution_ratio, method, zone, weather: {temp_f?, wind_mph?, humidity_pct?, precipitation?}, applied_at}",
+  "photo_analysis_prompt": "Analyze this landscaping/property photo. Identify: irrigation system components and their condition, plant health indicators (yellowing, wilting, disease), chemical application equipment present. Return JSON: {irrigation: {components_visible: [], condition: 'good'|'fair'|'poor'}, plant_health: [{plant_type, condition, issues: []}], equipment: [], compliance_concerns: []}",
+  "validation_rules": {
+    "wind_speed_max_mph": 10,
+    "temperature_min_f": 40,
+    "temperature_max_f": 90,
+    "record_retention_years": 3,
+    "required_fields": ["product", "epa_reg_number", "qty", "method", "zone"]
+  },
+  "alert_thresholds": {
+    "critical": ["application_without_epa_reg", "wind_speed_exceeded"],
+    "warning": ["weather_conditions_marginal", "irrigation_pressure_anomaly"],
+    "info": ["monthly_report_due"]
+  },
+  "required_daily_checks": [
+    {"id": "chemical_log", "label": "All chemical applications logged with EPA reg number", "frequency": "per_application"},
+    {"id": "weather_check", "label": "Weather conditions checked before application", "frequency": "per_application"},
+    {"id": "equipment_rinse", "label": "Sprayer equipment rinsed and logged", "frequency": "daily"},
+    {"id": "irrigation_check", "label": "Irrigation system pressure checked", "frequency": "weekly"}
+  ]
+}

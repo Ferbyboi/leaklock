@@ -4,6 +4,7 @@ import jwt
 from fastapi import APIRouter, HTTPException, Security
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from pydantic import BaseModel
+from typing import Optional
 
 from app.auth import get_supabase, _decode_token
 
@@ -12,7 +13,14 @@ security = HTTPBearer()
 
 
 class OnboardRequest(BaseModel):
-    company_name: str
+    company_name: str = ""
+    tenant_type: Optional[str] = None
+    location_name: str = ""
+    location_address: str = ""
+
+    @property
+    def resolved_name(self) -> str:
+        return self.company_name or self.location_name or "My Business"
 
 
 @router.post("/onboard")
@@ -43,16 +51,31 @@ async def onboard_tenant(
 
     supabase = get_supabase()
 
+    tenant_data: dict = {"name": body.resolved_name}
+    if body.tenant_type:
+        tenant_data["tenant_type"] = body.tenant_type
+
     # Create tenant row
     tenant_res = (
         supabase.table("tenants")
-        .insert({"name": body.company_name})
+        .insert(tenant_data)
         .execute()
     )
     if not tenant_res.data:
         raise HTTPException(status_code=500, detail="Failed to create tenant")
 
     tenant_id = tenant_res.data[0]["id"]
+
+    # Create first location if address was provided
+    if body.location_name or body.location_address:
+        try:
+            supabase.table("locations").insert({
+                "tenant_id": tenant_id,
+                "name": body.location_name or body.resolved_name,
+                "address": body.location_address or None,
+            }).execute()
+        except Exception:
+            pass  # Non-fatal — tenant was created successfully
 
     # Set app_metadata on the Supabase user via Admin API
     supabase.auth.admin.update_user_by_id(
@@ -63,7 +86,8 @@ async def onboard_tenant(
     sentry_sdk.set_context("onboarding", {
         "tenant_id": tenant_id,
         "user_id": user_id,
-        "company_name": body.company_name,
+        "company_name": body.resolved_name,
+        "tenant_type": body.tenant_type,
     })
 
-    return {"tenant_id": tenant_id, "company_name": body.company_name}
+    return {"tenant_id": tenant_id, "company_name": body.resolved_name}

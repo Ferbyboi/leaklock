@@ -13,7 +13,8 @@ export async function POST(
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
-  const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:8000';
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  if (!apiUrl) throw new Error("NEXT_PUBLIC_API_URL is not set");
   const res = await fetch(`${apiUrl}/jobs/${id}/approve`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${session.access_token}` },

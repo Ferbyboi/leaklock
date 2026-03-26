@@ -12,8 +12,8 @@ TENANT_A = str(uuid.uuid4())
 TENANT_B = str(uuid.uuid4())
 JOB_ID   = str(uuid.uuid4())
 
-ADMIN_USER  = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT_A, "role": "admin"}
-VIEWER_USER = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT_A, "role": "viewer"}
+ADMIN_USER  = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT_A, "role": "owner"}
+VIEWER_USER = {"user_id": str(uuid.uuid4()), "tenant_id": TENANT_A, "role": "tech"}
 
 # Any non-empty bearer token — HTTPBearer just extracts it; get_current_user is patched
 _FAKE_TOKEN = jwt.encode({"sub": "u"}, "x", algorithm="HS256")
@@ -43,13 +43,15 @@ def test_list_jobs_returns_tenant_scoped():
     _auth_override(ADMIN_USER)
     mock_result = MagicMock()
     mock_result.data = [{"id": JOB_ID, "tenant_id": TENANT_A, "status": "pending_invoice"}]
+    mock_result.count = 1
 
     with patch("app.routers.jobs.get_supabase") as mock_sb:
-        # Query chain: .table().select().eq("tenant_id").order().execute()
+        # Query chain: .table().select().eq("tenant_id").order().range().execute()
         mock_sb.return_value.table.return_value \
             .select.return_value \
             .eq.return_value \
             .order.return_value \
+            .range.return_value \
             .execute.return_value = mock_result
 
         resp = client.get("/jobs", headers=_AUTH)
@@ -85,15 +87,15 @@ def test_get_job_not_found():
 
 def test_approve_job_success():
     _auth_override(ADMIN_USER)
-    fetch_result = MagicMock()
-    fetch_result.data = {"id": JOB_ID, "status": "pending_invoice", "tenant_id": TENANT_A}
+    # Atomic update returns data — job was successfully approved
     update_result = MagicMock()
     update_result.data = [{"id": JOB_ID, "status": "approved"}]
 
     with patch("app.routers.jobs.get_supabase") as mock_sb:
         tbl = mock_sb.return_value.table.return_value
-        tbl.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = fetch_result
-        tbl.update.return_value.eq.return_value.eq.return_value.execute.return_value = update_result
+        tbl.update.return_value.eq.return_value.eq.return_value \
+            .neq.return_value.neq.return_value \
+            .execute.return_value = update_result
 
         resp = client.post(f"/jobs/{JOB_ID}/approve", headers=_AUTH)
     assert resp.status_code == 200
@@ -102,31 +104,38 @@ def test_approve_job_success():
 
 def test_approve_job_already_approved():
     _auth_override(ADMIN_USER)
-    fetch_result = MagicMock()
-    fetch_result.data = {"id": JOB_ID, "status": "approved", "tenant_id": TENANT_A}
-
+    # Atomic update returns [] — job already approved (.eq("status","pending_invoice") guard fired)
+    # Diagnostic select returns the actual status so the correct 409 message is returned
     with patch("app.routers.jobs.get_supabase") as mock_sb:
         tbl = mock_sb.return_value.table.return_value
-        tbl.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = fetch_result
-
+        tbl.update.return_value.eq.return_value.eq.return_value \
+            .eq.return_value \
+            .execute.return_value = MagicMock(data=[])
+        tbl.select.return_value.eq.return_value.eq.return_value \
+            .single.return_value.execute.return_value = MagicMock(
+                data={"id": JOB_ID, "status": "approved"}
+            )
         resp = client.post(f"/jobs/{JOB_ID}/approve", headers=_AUTH)
     assert resp.status_code == 409
 
 
 def test_approve_job_frozen_blocked():
     _auth_override(ADMIN_USER)
-    fetch_result = MagicMock()
-    fetch_result.data = {"id": JOB_ID, "status": "frozen", "tenant_id": TENANT_A}
-
+    # Atomic update returns [] — job is frozen (.eq("status","pending_invoice") guard fired)
     with patch("app.routers.jobs.get_supabase") as mock_sb:
         tbl = mock_sb.return_value.table.return_value
-        tbl.select.return_value.eq.return_value.eq.return_value.single.return_value.execute.return_value = fetch_result
-
+        tbl.update.return_value.eq.return_value.eq.return_value \
+            .eq.return_value \
+            .execute.return_value = MagicMock(data=[])
+        tbl.select.return_value.eq.return_value.eq.return_value \
+            .single.return_value.execute.return_value = MagicMock(
+                data={"id": JOB_ID, "status": "frozen"}
+            )
         resp = client.post(f"/jobs/{JOB_ID}/approve", headers=_AUTH)
     assert resp.status_code == 409
 
 
-def test_approve_requires_admin_or_manager():
-    _auth_override(VIEWER_USER)
+def test_approve_requires_owner_or_auditor():
+    _auth_override(VIEWER_USER)  # tech role — not allowed
     resp = client.post(f"/jobs/{JOB_ID}/approve", headers=_AUTH)
     assert resp.status_code == 403

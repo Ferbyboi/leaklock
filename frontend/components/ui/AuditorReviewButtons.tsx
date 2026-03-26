@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
+import posthog from 'posthog-js';
 
 interface Props {
   jobId: string;
@@ -19,7 +21,27 @@ export default function AuditorReviewButtons({ jobId, resultId }: Props) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action }),
     });
-    if (res.ok) router.refresh();
+    if (res.ok) {
+      const labels: Record<string, string> = {
+        false_positive: 'Marked as false positive',
+        confirm_leak: 'Revenue leak confirmed',
+        override_approve: 'Admin override applied',
+      };
+      toast.success(labels[action] ?? 'Action recorded');
+      try {
+        const eventNames: Record<string, string> = {
+          false_positive: 'auditor_false_positive',
+          confirm_leak: 'auditor_confirm_leak',
+          override_approve: 'auditor_override_approve',
+        };
+        posthog.capture(eventNames[action], { job_id: jobId, result_id: resultId });
+      } catch {
+        // analytics must never break the UI
+      }
+      router.refresh();
+    } else {
+      toast.error('Action failed — please try again');
+    }
     setLoading(null);
   }
 

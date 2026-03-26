@@ -20,6 +20,12 @@ PLAN_PRICES = {
     "enterprise": os.getenv("STRIPE_PRICE_ENTERPRISE"), # e.g. $399/mo
 }
 
+PLAN_SEAT_LIMITS = {
+    "starter":    2,
+    "growth":     10,
+    "enterprise": 9999,
+}
+
 
 @router.get("/billing/plans")
 async def get_plans():
@@ -39,6 +45,8 @@ async def create_checkout_session(
     user: dict = Security(get_current_user),
 ):
     """Create a Stripe Checkout session for the given plan."""
+    if not stripe.api_key:
+        raise HTTPException(status_code=503, detail="Billing not configured")
     price_id = PLAN_PRICES.get(plan)
     if not price_id:
         raise HTTPException(status_code=400, detail=f"Unknown plan: {plan}")
@@ -127,38 +135,58 @@ async def stripe_webhook(
         session = event["data"]["object"]
         tenant_id = session["metadata"].get("tenant_id")
         plan = session["metadata"].get("plan", "starter")
+        customer_id = session.get("customer")
         subscription_id = session.get("subscription")
 
         if tenant_id:
             supabase.table("tenants").update({
                 "plan": plan,
+                "stripe_customer_id": customer_id,
                 "stripe_subscription_id": subscription_id,
                 "subscription_status": "active",
+                "seat_limit": PLAN_SEAT_LIMITS.get(plan, 2),
+                "onboarding_complete": True,
             }).eq("id", tenant_id).execute()
 
-    elif event["type"] in ("customer.subscription.updated", "customer.subscription.deleted"):
+    elif event["type"] == "customer.subscription.updated":
         sub = event["data"]["object"]
-        customer_id = sub["customer"]
-        status = sub["status"]  # active | past_due | canceled | unpaid
-
-        tenant = (
-            supabase.table("tenants")
-            .select("id")
-            .eq("stripe_customer_id", customer_id)
-            .single()
-            .execute()
-        )
-        if tenant.data:
+        sub_id = sub.get("id")
+        if sub_id:
+            price_id = (sub.get("items", {}).get("data") or [{}])[0].get("price", {}).get("id")
+            plan = next((k for k, v in PLAN_PRICES.items() if v and v == price_id), "starter")
             supabase.table("tenants").update({
-                "subscription_status": status,
-            }).eq("id", tenant.data["id"]).execute()
+                "plan": plan,
+                "subscription_status": sub.get("status", "active"),
+                "seat_limit": PLAN_SEAT_LIMITS.get(plan, 2),
+            }).eq("stripe_subscription_id", sub_id).execute()
+
+    elif event["type"] == "customer.subscription.deleted":
+        sub = event["data"]["object"]
+        sub_id = sub.get("id")
+        if sub_id:
+            supabase.table("tenants").update({
+                "plan": "cancelled",
+                "subscription_status": "cancelled",
+            }).eq("stripe_subscription_id", sub_id).execute()
 
     elif event["type"] == "invoice.payment_failed":
         invoice = event["data"]["object"]
-        customer_id = invoice["customer"]
+        sub_id = invoice.get("subscription")
         sentry_sdk.capture_message(
-            f"Stripe payment failed for customer {customer_id}",
+            f"Stripe payment failed: subscription {sub_id}",
             level="warning",
         )
+        if sub_id:
+            supabase.table("tenants").update({
+                "subscription_status": "past_due",
+            }).eq("stripe_subscription_id", sub_id).execute()
+
+    elif event["type"] == "invoice.paid":
+        invoice = event["data"]["object"]
+        sub_id = invoice.get("subscription")
+        if sub_id:
+            supabase.table("tenants").update({
+                "subscription_status": "active",
+            }).eq("stripe_subscription_id", sub_id).execute()
 
     return {"received": True}

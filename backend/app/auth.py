@@ -10,9 +10,9 @@ import jwt
 from jwt import PyJWKClient
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_ANON_KEY = os.getenv("SUPABASE_ANON_KEY")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+# Legacy fallback: some deployments set JWT_SECRET, others SUPABASE_JWT_SECRET
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET") or os.getenv("JWT_SECRET", "")
 
 security = HTTPBearer()
 logger = logging.getLogger(__name__)
@@ -52,9 +52,15 @@ def _decode_token(token: str) -> dict:
             audience="authenticated",
         )
 
-    # Dev fallback — no signature verification
-    logger.warning("SUPABASE_JWT_SECRET not set — skipping JWT signature verification")
-    return jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256", "ES256", "RS256"])
+    # Hard fail unless caller explicitly opts into bypass for local testing
+    if os.getenv("SUPABASE_AUTH_BYPASS") == "true":
+        logger.warning("SUPABASE_AUTH_BYPASS=true — JWT verification disabled (dev only)")
+        return jwt.decode(token, options={"verify_signature": False}, algorithms=["HS256", "ES256", "RS256"])
+
+    raise jwt.InvalidTokenError(
+        "No valid JWT signing key available. Set SUPABASE_JWT_SECRET or ensure SUPABASE_URL "
+        "is reachable for JWKS. Set SUPABASE_AUTH_BYPASS=true only for local development."
+    )
 
 
 def get_supabase() -> Client:
