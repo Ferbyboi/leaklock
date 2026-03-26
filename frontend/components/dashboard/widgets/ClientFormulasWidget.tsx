@@ -54,7 +54,7 @@ interface Props {
   className?: string;
 }
 
-export function ClientFormulasWidget({ jobId, tenantId, className }: Props) {
+export function ClientFormulasWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [clients, setClients] = useState<ClientFormula[]>(MOCK_CLIENTS);
   const [selected, setSelected] = useState<string | null>(null);
 

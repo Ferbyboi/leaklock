@@ -19,7 +19,7 @@ interface Props {
   className?: string;
 }
 
-export function RefrigerantLogWidget({ jobId, tenantId, className }: Props) {
+export function RefrigerantLogWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [rows, setRows] = useState<RefRow[]>(MOCK_ROWS);
 
   useEffect(() => {

@@ -46,7 +46,7 @@ interface Props {
   className?: string;
 }
 
-export function TreeMapWidget({ jobId, tenantId, className }: Props) {
+export function TreeMapWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [jobs] = useState<JobPin[]>(MOCK_JOBS);
   const [mounted, setMounted] = useState(false);
   const [realJobs, setRealJobs] = useState<{ id: string; crm_job_id: string; address: string; status: string }[]>([]);

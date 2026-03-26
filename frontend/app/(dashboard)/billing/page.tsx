@@ -127,11 +127,12 @@ export default function BillingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map(plan => {
               const info = PLAN_PRICES[plan];
+              if (!info) return null;
               // treat "growth" (legacy alias) as equivalent to "pro"
               const normalizedCurrent = currentPlan === "growth" ? "pro" : currentPlan;
               const isCurrent = plan === normalizedCurrent;
               const isUpgrade = normalizedCurrent ? PLAN_RANK[plan] > PLAN_RANK[normalizedCurrent] : true;
-              const isDowngrade = normalizedCurrent ? PLAN_RANK[plan] < PLAN_RANK[normalizedCurrent] : false;
+              void (normalizedCurrent ? PLAN_RANK[plan] < PLAN_RANK[normalizedCurrent] : false);
               const isPro = plan === "pro";
 
               return (
@@ -199,7 +200,7 @@ export default function BillingPage() {
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400">Feature</th>
                     {plans.map(p => (
                       <th key={p} className={`px-4 py-3 text-center text-xs font-medium ${p === currentPlan ? "text-blue-600" : "text-gray-500 dark:text-gray-400"}`}>
-                        {PLAN_PRICES[p].label}
+                        {PLAN_PRICES[p]?.label}
                       </th>
                     ))}
                   </tr>

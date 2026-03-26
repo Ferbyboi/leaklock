@@ -83,10 +83,12 @@ export default function IntegrationsPage() {
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
       if (!resp.ok) {
-        const data = await resp.json();
-        throw new Error(data.detail || "Failed to start connection");
+        const data = await resp.json().catch(() => ({}));
+        throw new Error(data.detail || `Server returned ${resp.status}`);
       }
-      const { authorize_url } = await resp.json();
+      const data = await resp.json();
+      if (!data.authorize_url) throw new Error("No authorize URL returned");
+      window.location.href = data.authorize_url;
       window.location.href = authorize_url;
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Connection failed");

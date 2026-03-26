@@ -113,7 +113,7 @@ export default async function DashboardLayout({
           <div className="px-3 py-3 pb-10 border-t border-gray-100 dark:border-gray-800">
             <div className="flex items-center gap-2 px-2 mb-2">
               <div className="h-6 w-6 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center text-[10px] font-bold text-blue-700 dark:text-blue-300 shrink-0">
-                {(user.email ?? '?')[0].toUpperCase()}
+                {((user.email ?? '?')[0] ?? '?').toUpperCase()}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 truncate flex-1">{user.email}</p>
             </div>

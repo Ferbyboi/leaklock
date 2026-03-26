@@ -28,7 +28,7 @@ interface Props {
   className?: string;
 }
 
-export function PressureWidget({ jobId, tenantId, className }: Props) {
+export function PressureWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [data, setData] = useState(MOCK_DATA);
 
   useEffect(() => {

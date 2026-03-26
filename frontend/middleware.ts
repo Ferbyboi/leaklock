@@ -41,7 +41,7 @@ function checkPlanGate(pathname: string, plan: Plan): { allowed: boolean; featur
     if (pathname !== gate.path && !pathname.startsWith(gate.path + '/')) continue;
 
     const userRank = PLAN_RANK[plan ?? ''] ?? 0;
-    const requiredRank = PLAN_RANK[gate.requiredPlan];
+    const requiredRank = PLAN_RANK[gate.requiredPlan] ?? 0;
 
     if (userRank < requiredRank) {
       return { allowed: false, feature: gate.feature };

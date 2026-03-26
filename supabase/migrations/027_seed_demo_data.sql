@@ -202,7 +202,7 @@ ON CONFLICT (id) DO NOTHING;
 
 
 -- ── 5. Estimates (Input A — The Promise) ─────────────────────────────────────
-INSERT INTO estimates (id, tenant_id, job_id, line_items, source, created_at, updated_at)
+INSERT INTO estimates (id, tenant_id, job_id, line_items, total_cents)
 VALUES (
     '00000000-0000-0000-0000-000000000301',
     '00000000-0000-0000-0000-000000000001',
@@ -212,13 +212,11 @@ VALUES (
       {"description": "Pressure regulator installation",  "qty": 1, "unit_price_cents": 22000},
       {"description": "Main drain snake",                 "qty": 1, "unit_price_cents": 9500}
     ]'::jsonb,
-    'jobber',
-    now() - interval '11 days',
-    now() - interval '11 days'
+    50000
 )
-ON CONFLICT (tenant_id, job_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO estimates (id, tenant_id, job_id, line_items, source, created_at, updated_at)
+INSERT INTO estimates (id, tenant_id, job_id, line_items, total_cents)
 VALUES (
     '00000000-0000-0000-0000-000000000302',
     '00000000-0000-0000-0000-000000000001',
@@ -228,13 +226,11 @@ VALUES (
       {"description": "Garbage disposal replacement",       "qty": 1, "unit_price_cents": 34500},
       {"description": "Expansion tank installation",        "qty": 1, "unit_price_cents": 28000}
     ]'::jsonb,
-    'jobber',
-    now() - interval '9 days',
-    now() - interval '9 days'
+    77500
 )
-ON CONFLICT (tenant_id, job_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO estimates (id, tenant_id, job_id, line_items, source, created_at, updated_at)
+INSERT INTO estimates (id, tenant_id, job_id, line_items, total_cents)
 VALUES (
     '00000000-0000-0000-0000-000000000303',
     '00000000-0000-0000-0000-000000000001',
@@ -244,13 +240,11 @@ VALUES (
       {"description": "Anode rod replacement","qty": 1, "unit_price_cents": 8500},
       {"description": "Floor drain rodding",  "qty": 1, "unit_price_cents": 11000}
     ]'::jsonb,
-    'manual',
-    now() - interval '7 days',
-    now() - interval '7 days'
+    32000
 )
-ON CONFLICT (tenant_id, job_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO estimates (id, tenant_id, job_id, line_items, source, created_at, updated_at)
+INSERT INTO estimates (id, tenant_id, job_id, line_items, total_cents)
 VALUES (
     '00000000-0000-0000-0000-000000000304',
     '00000000-0000-0000-0000-000000000001',
@@ -259,13 +253,11 @@ VALUES (
       {"description": "Kitchen faucet replacement",                   "qty": 1, "unit_price_cents": 21500},
       {"description": "Under-sink shut-off valve replacement (x2)",   "qty": 2, "unit_price_cents": 9500}
     ]'::jsonb,
-    'jobber',
-    now() - interval '5 days',
-    now() - interval '5 days'
+    40500
 )
-ON CONFLICT (tenant_id, job_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
-INSERT INTO estimates (id, tenant_id, job_id, line_items, source, created_at, updated_at)
+INSERT INTO estimates (id, tenant_id, job_id, line_items, total_cents)
 VALUES (
     '00000000-0000-0000-0000-000000000305',
     '00000000-0000-0000-0000-000000000001',
@@ -275,11 +267,9 @@ VALUES (
       {"description": "Toilet wax ring replacement",      "qty": 1, "unit_price_cents": 13500},
       {"description": "Supply line tighten / reseal",     "qty": 1, "unit_price_cents": 4500}
     ]'::jsonb,
-    'manual',
-    now() - interval '2 days',
-    now() - interval '2 days'
+    26500
 )
-ON CONFLICT (tenant_id, job_id) DO NOTHING;
+ON CONFLICT (id) DO NOTHING;
 
 
 -- ── 6. Draft invoices (Input C — The Bill) ───────────────────────────────────
@@ -420,7 +410,6 @@ INSERT INTO alerts (
     severity, alert_type,
     title, body,
     metadata,
-    read,
     created_at
 )
 VALUES (
@@ -432,7 +421,6 @@ VALUES (
     'Revenue Leak Detected — Job #crm-job-demo-001',
     'The draft invoice is missing "Main drain snake" ($95.00). Estimated unbilled revenue: $95.00. Invoice is on hold pending auditor review.',
     '{"estimated_leak_cents": 9500, "missing_items": ["Main drain snake"], "reconciliation_result_id": "00000000-0000-0000-0000-000000000501"}'::jsonb,
-    false,
     now() - interval '10 days'
 )
 ON CONFLICT (id) DO NOTHING;
@@ -443,7 +431,6 @@ INSERT INTO alerts (
     severity, alert_type,
     title, body,
     metadata,
-    read,
     created_at
 )
 VALUES (
@@ -455,7 +442,6 @@ VALUES (
     'Revenue Leak Detected — Job #crm-job-demo-002',
     'The draft invoice is missing "Expansion tank installation" ($280.00). Estimated unbilled revenue: $280.00. Invoice is on hold pending auditor review.',
     '{"estimated_leak_cents": 28000, "missing_items": ["Expansion tank installation"], "reconciliation_result_id": "00000000-0000-0000-0000-000000000502"}'::jsonb,
-    false,
     now() - interval '8 days'
 )
 ON CONFLICT (id) DO NOTHING;

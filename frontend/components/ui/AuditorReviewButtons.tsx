@@ -34,7 +34,7 @@ export default function AuditorReviewButtons({ jobId, resultId }: Props) {
           confirm_leak: 'auditor_confirm_leak',
           override_approve: 'auditor_override_approve',
         };
-        posthog.capture(eventNames[action], { job_id: jobId, result_id: resultId });
+        posthog.capture(eventNames[action] ?? action, { job_id: jobId, result_id: resultId });
       } catch {
         // analytics must never break the UI
       }
