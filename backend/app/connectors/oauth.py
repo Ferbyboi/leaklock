@@ -67,24 +67,44 @@ PROVIDERS: dict[str, dict] = {
     },
 }
 
-# Redis-backed state store for CSRF — works across multiple workers
-_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+# State store for CSRF — Redis if available, in-memory fallback
+_REDIS_URL = os.getenv("REDIS_URL", "")
 _OAUTH_STATE_TTL = 600  # 10 minutes
+_MEMORY_STORE: dict[str, str] = {}  # fallback when Redis is unavailable
 
-def _get_redis() -> redis.Redis:
-    return redis.from_url(_REDIS_URL, decode_responses=True)
+
+def _get_redis() -> Optional[redis.Redis]:
+    if not _REDIS_URL:
+        return None
+    try:
+        r = redis.from_url(_REDIS_URL, decode_responses=True, socket_connect_timeout=2)
+        r.ping()
+        return r
+    except Exception:
+        logger.warning("Redis unavailable — using in-memory OAuth state store")
+        return None
+
 
 def _set_oauth_state(state: str, data: dict) -> None:
-    _get_redis().setex(f"oauth_state:{state}", _OAUTH_STATE_TTL, json.dumps(data))
+    r = _get_redis()
+    if r:
+        r.setex(f"oauth_state:{state}", _OAUTH_STATE_TTL, json.dumps(data))
+    else:
+        _MEMORY_STORE[state] = json.dumps(data)
+
 
 def _pop_oauth_state(state: str) -> Optional[dict]:
     r = _get_redis()
-    key = f"oauth_state:{state}"
-    raw = r.get(key)
-    if raw:
-        r.delete(key)
-        return json.loads(raw)
-    return None
+    if r:
+        key = f"oauth_state:{state}"
+        raw = r.get(key)
+        if raw:
+            r.delete(key)
+            return json.loads(raw)
+        return None
+    else:
+        raw = _MEMORY_STORE.pop(state, None)
+        return json.loads(raw) if raw else None
 
 
 def _get_provider_config(provider: str) -> dict:
