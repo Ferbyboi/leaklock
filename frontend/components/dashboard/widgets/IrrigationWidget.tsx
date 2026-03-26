@@ -27,7 +27,7 @@ interface Props {
   className?: string;
 }
 
-export function IrrigationWidget({ jobId, tenantId, className }: Props) {
+export function IrrigationWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [zones, setZones] = useState<Zone[]>(MOCK_ZONES);
 
   useEffect(() => {
@@ -89,7 +89,7 @@ export function IrrigationWidget({ jobId, tenantId, className }: Props) {
       {/* Zone grid */}
       <div className="grid grid-cols-2 gap-2 flex-1">
         {zones.map((zone) => {
-          const style = STATUS_STYLES[zone.status] ?? STATUS_STYLES.idle;
+          const style = STATUS_STYLES[zone.status] ?? STATUS_STYLES["idle"]!;
           return (
             <div
               key={zone.id}

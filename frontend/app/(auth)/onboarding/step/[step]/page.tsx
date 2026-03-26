@@ -457,6 +457,8 @@ function Step5() {
 
   const tip = TOUR_TIPS[tourStep];
 
+  if (!tip) return null;
+
   return (
     <div className="space-y-6 text-center">
       <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto">

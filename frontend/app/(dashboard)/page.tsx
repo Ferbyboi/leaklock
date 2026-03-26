@@ -158,7 +158,7 @@ export default async function DashboardPage() {
 
   const jobs: Job[] = (jobRows ?? []) as Job[];
   const total = jobCount ?? 0;
-  const apiOk = true;
+  void 0; // apiOk removed — unused
 
   // ── Fetch supporting data from Supabase ────────────────────────────────────
   const { data: tenant } = await supabase
@@ -239,7 +239,7 @@ export default async function DashboardPage() {
     }
   }
   const trendData = Array.from(trendMap.entries()).map(([dateStr, vals]) => ({
-    label: dayLabels[new Date(dateStr).getDay()],
+    label: dayLabels[new Date(dateStr).getDay()] ?? '',
     ...vals,
   }));
 

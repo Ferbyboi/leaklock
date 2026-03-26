@@ -146,7 +146,7 @@ export default async function ReportsPage() {
     }
   }
 
-  const weekBuckets = last12Weeks.map((w) => weekMap[w]);
+  const weekBuckets = last12Weeks.map((w) => weekMap[w]).filter((b): b is WeekBucket => b != null);
 
   return (
     <div className="max-w-6xl space-y-6">

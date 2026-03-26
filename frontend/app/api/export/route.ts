@@ -88,7 +88,8 @@ export async function GET(req: NextRequest) {
 
   // CSV export
   const rows = data as Record<string, unknown>[];
-  const headers = Object.keys(rows[0]).filter(k => typeof rows[0][k] !== 'object');
+  const firstRow = rows[0] ?? {};
+  const headers = Object.keys(firstRow).filter(k => typeof firstRow[k] !== 'object');
   const csvLines = [
     headers.join(','),
     ...rows.map(row =>

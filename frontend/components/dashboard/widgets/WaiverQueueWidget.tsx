@@ -18,7 +18,7 @@ interface Props {
   className?: string;
 }
 
-export function WaiverQueueWidget({ jobId, tenantId, className }: Props) {
+export function WaiverQueueWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [queue, setQueue] = useState<WaiverEntry[]>(MOCK_QUEUE);
   const [signing, setSigning] = useState<string | null>(null);
   const sigRef = useRef<SignatureCanvas | null>(null);

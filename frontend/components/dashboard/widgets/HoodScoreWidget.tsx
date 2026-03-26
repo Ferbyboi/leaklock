@@ -26,7 +26,7 @@ function scoreLabel(score: number): string {
   return "Non-Compliant";
 }
 
-export function HoodScoreWidget({ jobId, tenantId, className }: Props) {
+export function HoodScoreWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [score, setScore] = useState<number>(MOCK_SCORE);
   const [lastCleaned, setLastCleaned] = useState(MOCK_LAST_CLEANED);
   const [nextDue, setNextDue] = useState(MOCK_NEXT_DUE);

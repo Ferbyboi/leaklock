@@ -25,7 +25,7 @@ function scoreColor(score: number): string {
   return "#ef4444";
 }
 
-export function SafetyScoreGauge({ jobId, tenantId, className }: Props) {
+export function SafetyScoreGauge({ jobId: _jobId, tenantId, className }: Props) {
   const [score, setScore] = useState<number>(MOCK_SCORE);
   const [checks, setChecks] = useState(MOCK_CHECKS);
 

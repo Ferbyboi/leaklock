@@ -34,7 +34,7 @@ interface Props {
   className?: string;
 }
 
-export function PlantHealthWidget({ jobId, tenantId, className }: Props) {
+export function PlantHealthWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [plants, setPlants] = useState<Plant[]>(MOCK_PLANTS);
 
   useEffect(() => {
@@ -85,7 +85,7 @@ export function PlantHealthWidget({ jobId, tenantId, className }: Props) {
 
       <div className="flex-1 overflow-y-auto space-y-1.5">
         {plants.map((plant) => {
-          const styles = HEALTH_STYLES[plant.health] ?? HEALTH_STYLES.good;
+          const styles = HEALTH_STYLES[plant.health] ?? HEALTH_STYLES["good"]!;
           return (
             <div
               key={plant.id}

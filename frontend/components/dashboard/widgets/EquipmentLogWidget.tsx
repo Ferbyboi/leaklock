@@ -36,7 +36,7 @@ interface Props {
   className?: string;
 }
 
-export function EquipmentLogWidget({ jobId, tenantId, className }: Props) {
+export function EquipmentLogWidget({ jobId: _jobId, tenantId, className }: Props) {
   const [equipment, setEquipment] = useState<EquipRow[]>(MOCK_EQUIPMENT);
 
   useEffect(() => {
@@ -91,7 +91,7 @@ export function EquipmentLogWidget({ jobId, tenantId, className }: Props) {
 
       <div className="flex-1 overflow-y-auto space-y-2">
         {equipment.map((eq) => {
-          const styles = STATUS_STYLES[eq.status] ?? STATUS_STYLES.ok;
+          const styles = STATUS_STYLES[eq.status] ?? STATUS_STYLES["ok"]!;
           return (
             <div
               key={eq.id}
