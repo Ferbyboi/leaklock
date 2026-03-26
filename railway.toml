@@ -1,18 +1,35 @@
-[build]
+[[services]]
+name = "api"
+[services.build]
 builder = "DOCKERFILE"
 dockerfilePath = "backend/Dockerfile"
 buildContext = "backend"
-
-[[services]]
-name = "api"
 startCommand = "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
 healthcheckPath = "/health"
 healthcheckTimeout = 30
 
 [[services]]
 name = "worker"
+[services.build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+buildContext = "backend"
 startCommand = "celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2 -Q default"
 
 [[services]]
 name = "beat"
+[services.build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+buildContext = "backend"
 startCommand = "celery -A app.celery_app.celery_app beat --loglevel=info"
+
+[[services]]
+name = "frontend"
+[services.build]
+builder = "DOCKERFILE"
+dockerfilePath = "frontend/Dockerfile"
+buildContext = "frontend"
+startCommand = "node server.js"
+healthcheckPath = "/api/health"
+healthcheckTimeout = 30
