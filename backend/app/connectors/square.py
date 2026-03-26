@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 
 from app.db import get_db as get_supabase
 from app.connectors.webhook_normalizer import normalize_square
+from app.connectors.job_ingestion import ingest_normalized_job as _ingest_normalized_job
 
 logger = logging.getLogger(__name__)
 
@@ -55,73 +56,6 @@ def _verify_signature(
         hmac.new(secret.encode(), combined, hashlib.sha256).digest()  # type: ignore[attr-defined]
     ).decode()
     return hmac.compare_digest(expected, signature)
-
-
-# ── Job ingestion helper ──────────────────────────────────────────────────────
-
-def _ingest_normalized_job(normalized: dict, db) -> str:
-    """Upsert job + field notes + draft invoice from a normalized payload.
-
-    Returns the internal job UUID.  All DB writes include tenant_id.
-    """
-    tenant_id = normalized["tenant_id"]
-    crm_job_id = normalized["crm_job_id"]
-
-    job_result = (
-        db.table("jobs")
-        .upsert(
-            {
-                "tenant_id": tenant_id,
-                "crm_job_id": crm_job_id,
-                "status": normalized["status"],
-            },
-            on_conflict="tenant_id,crm_job_id",
-        )
-        .execute()
-    )
-    job_id: Optional[str] = (job_result.data or [{}])[0].get("id")
-    if not job_id:
-        raise RuntimeError(
-            f"Failed to upsert Square job {crm_job_id} for tenant {tenant_id}"
-        )
-
-    tech_notes = (
-        f"Location: {normalized['technician_name']}\n"
-        f"Address: {normalized['address']}\n"
-        f"Customer: {normalized['customer_name']}"
-    ).strip()
-
-    db.table("field_notes").upsert(
-        {
-            "tenant_id": tenant_id,
-            "job_id": job_id,
-            "raw_text": tech_notes,
-            "photo_urls": [],
-            "parse_status": "pending",
-        },
-        on_conflict="tenant_id,job_id",
-    ).execute()
-
-    if normalized["line_items"]:
-        internal_items = [
-            {
-                "description": item["description"],
-                "qty": item["quantity"],
-                "unit_price_cents": int(item["unit_price"] * 100),
-                "unit": "each",
-            }
-            for item in normalized["line_items"]
-        ]
-        db.table("draft_invoices").upsert(
-            {
-                "tenant_id": tenant_id,
-                "job_id": job_id,
-                "line_items": internal_items,
-            },
-            on_conflict="tenant_id,job_id",
-        ).execute()
-
-    return job_id
 
 
 # ── Webhook endpoint ──────────────────────────────────────────────────────────

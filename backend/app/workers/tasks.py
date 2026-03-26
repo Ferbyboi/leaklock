@@ -538,10 +538,10 @@ def transcribe_and_parse_voice(
                 "tenant_id": tenant_id,
                 "user_id": tech_id,
                 "event_type": "voice",
-                "raw_input": transcript,
+                "transcript": transcript,
                 "parsed_data": {"items": parsed_items},
-                "confidence": confidence,
-                "media_urls": [media_url],
+                "transcript_confidence": confidence,
+                "raw_storage_url": media_url,
             }).execute()
 
             # 7. Run compliance check
@@ -602,10 +602,9 @@ def parse_sms_text_note(
                 "tenant_id": tenant_id,
                 "user_id": tech_id,
                 "event_type": "text",
-                "raw_input": text,
+                "transcript": text,
                 "parsed_data": {"items": parsed_items},
-                "confidence": 1.0,
-                "media_urls": [],
+                "transcript_confidence": 1.0,
             }).execute()
 
             try:
@@ -918,6 +917,7 @@ def _run_compliance_check(db, event_id: str, tenant_id: str, tenant_type: str, p
     status = "fail" if violations else "pass"
     db.table("compliance_checks").insert({
         "id": str(uuid.uuid4()),
+        "tenant_id": tenant_id,
         "field_event_id": event_id,
         "schema_version": "1.0.0",
         "status": status,

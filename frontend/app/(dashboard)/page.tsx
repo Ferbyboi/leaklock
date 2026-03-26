@@ -6,8 +6,6 @@ import Link from 'next/link';
 import { RevenueTrendChart } from '@/components/dashboard/RevenueTrendChart';
 import { PipelineBreakdown } from '@/components/dashboard/PipelineBreakdown';
 
-export const dynamic = 'force-dynamic';
-
 // ── Types ─────────────────────────────────────────────────────────────────────
 
 interface Job {
