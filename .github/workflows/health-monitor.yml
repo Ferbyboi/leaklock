@@ -1,0 +1,62 @@
+name: Health Monitor
+
+on:
+  schedule:
+    # Check every 15 minutes
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check backend health
+        id: backend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            https://leaklock-production.up.railway.app/health || echo "000")
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" != "200" ]; then
+            echo "Backend health check failed with status: $STATUS"
+          fi
+
+      - name: Check frontend health
+        id: frontend
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
+            https://leaklock-three.vercel.app || echo "000")
+          echo "status=$STATUS" >> "$GITHUB_OUTPUT"
+          if [ "$STATUS" != "200" ]; then
+            echo "Frontend health check failed with status: $STATUS"
+          fi
+
+      - name: Create issue if unhealthy
+        if: steps.backend.outputs.status != '200' || steps.frontend.outputs.status != '200'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const backend = '${{ steps.backend.outputs.status }}';
+            const frontend = '${{ steps.frontend.outputs.status }}';
+            const issues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open',
+              labels: 'outage',
+            });
+            // Don't create duplicate issues
+            if (issues.data.length > 0) {
+              console.log('Outage issue already open, skipping.');
+              return;
+            }
+            let body = '## Production Health Check Failed\n\n';
+            if (backend !== '200') body += `- **Backend**: returned ${backend} (expected 200)\n`;
+            if (frontend !== '200') body += `- **Frontend**: returned ${frontend} (expected 200)\n`;
+            body += `\n**Time**: ${new Date().toISOString()}\n`;
+            body += `\n### Links\n- [Railway Dashboard](https://railway.com)\n- [Vercel Dashboard](https://vercel.com)\n`;
+            await github.rest.issues.create({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              title: `🚨 Production outage detected`,
+              body,
+              labels: ['outage', 'critical'],
+            });
