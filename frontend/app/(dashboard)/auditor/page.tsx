@@ -127,7 +127,10 @@ export default async function AuditorDashboard() {
                     <div key={i} className="flex items-center justify-between text-xs bg-red-50 rounded-lg px-3 py-1.5">
                       <span className="text-gray-700">{m.item}</span>
                       <span className="text-red-600 font-medium shrink-0 ml-4">
-                        {m.qty > 1 ? `${m.qty}× ` : ''}${(m.estimated_leak_cents / 100).toFixed(2)}
+                        {(m.qty ?? 1) > 1 ? `${m.qty}× ` : ''}
+                        {typeof m.estimated_leak_cents === 'number'
+                          ? `$${(m.estimated_leak_cents / 100).toFixed(2)}`
+                          : ''}
                       </span>
                     </div>
                   ))}

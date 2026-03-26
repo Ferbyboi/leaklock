@@ -28,8 +28,8 @@ logger = logging.getLogger(__name__)
 # Severity → channel routing table
 # ---------------------------------------------------------------------------
 SEVERITY_CHANNELS: Dict[str, List[str]] = {
-    "critical": ["sms", "slack", "in_app", "email"],
-    "warning":  ["slack", "in_app"],
+    "critical": ["sms", "slack", "in_app", "email", "push"],
+    "warning":  ["slack", "in_app", "push"],
     "info":     ["email"],
 }
 
@@ -96,6 +96,75 @@ async def _send_slack(webhook_url: str, title: str, body: str) -> None:
     async with httpx.AsyncClient(timeout=10) as http:
         response = await http.post(webhook_url, json=payload)
         response.raise_for_status()
+
+
+async def _send_push(
+    db: Any,
+    tenant_id: str,
+    user_id: str,
+    title: str,
+    body: str,
+    metadata: Dict[str, Any],
+) -> int:
+    """Send Web Push notifications to all subscriptions for a user.
+
+    Returns the number of successful pushes sent.
+    """
+    try:
+        from pywebpush import webpush, WebPushException  # lazy import
+    except ImportError:
+        logger.warning("pywebpush not installed — skipping push dispatch")
+        return 0
+
+    vapid_private = os.getenv("VAPID_PRIVATE_KEY", "")
+    vapid_email = os.getenv("VAPID_CLAIM_EMAIL", "mailto:admin@leaklock.io")
+    if not vapid_private:
+        return 0
+
+    # Fetch all push subscriptions for this user
+    result = (
+        db.table("push_subscriptions")
+        .select("id, endpoint, p256dh, auth")
+        .eq("user_id", user_id)
+        .eq("tenant_id", tenant_id)
+        .execute()
+    )
+    subscriptions = result.data or []
+    if not subscriptions:
+        return 0
+
+    import json
+    payload = json.dumps({
+        "title": title,
+        "body": body[:200],
+        "data": {k: v for k, v in metadata.items() if isinstance(v, (str, int, float, bool))},
+        "tag": metadata.get("job_id", "leaklock-alert"),
+    })
+
+    sent = 0
+    for sub in subscriptions:
+        try:
+            await asyncio.to_thread(
+                webpush,
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": {"p256dh": sub["p256dh"], "auth": sub["auth"]},
+                },
+                data=payload,
+                vapid_private_key=vapid_private,
+                vapid_claims={"sub": vapid_email},
+            )
+            sent += 1
+        except Exception as push_exc:
+            # 410 Gone = subscription expired, clean it up
+            if "410" in str(push_exc) or "expired" in str(push_exc).lower():
+                try:
+                    db.table("push_subscriptions").delete().eq("id", sub["id"]).execute()
+                except Exception:
+                    pass
+            else:
+                logger.warning("Push send failed for endpoint %s: %s", sub["endpoint"][:50], push_exc)
+    return sent
 
 
 async def _send_inapp(
@@ -261,6 +330,10 @@ class NotificationService:
                     await self._dispatch_inapp(
                         db, tenant_id, alert_id, recipient_user_id, title, body, metadata, dispatched,
                     )
+                elif channel == "push":
+                    await self._dispatch_push(
+                        db, tenant_id, recipient_user_id, title, body, metadata, dispatched, skipped,
+                    )
                 else:
                     skipped.append(channel)
                     continue
@@ -367,3 +440,23 @@ class NotificationService:
     ) -> None:
         await _send_inapp(db, tenant_id, recipient_user_id, alert_id, title, body, metadata)
         dispatched.append("in_app")
+
+    async def _dispatch_push(
+        self,
+        db: Any,
+        tenant_id: str,
+        recipient_user_id: str,
+        title: str,
+        body: str,
+        metadata: Dict[str, Any],
+        dispatched: List[str],
+        skipped: List[str],
+    ) -> None:
+        if not os.getenv("VAPID_PRIVATE_KEY"):
+            skipped.append("push:no_vapid_key")
+            return
+        sent = await _send_push(db, tenant_id, recipient_user_id, title, body, metadata)
+        if sent > 0:
+            dispatched.append("push")
+        else:
+            skipped.append("push:no_subscriptions")

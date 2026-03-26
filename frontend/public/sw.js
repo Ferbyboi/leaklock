@@ -1,5 +1,5 @@
 // LeakLock Service Worker
-// Cache-first for static assets, network-first for API calls
+// Cache-first for static assets, network-first for API calls, Web Push notifications
 
 const CACHE_NAME = "leaklock-v1";
 const STATIC_CACHE = "leaklock-static-v1";
@@ -87,6 +87,60 @@ async function cacheFirst(request, cacheName) {
     return new Response("Offline — asset unavailable", { status: 503 });
   }
 }
+
+// ── Web Push Notifications ──────────────────────────────────────────────────
+
+self.addEventListener("push", (event) => {
+  if (!event.data) return;
+
+  let payload;
+  try {
+    payload = event.data.json();
+  } catch {
+    payload = { title: "LeakLock Alert", body: event.data.text() };
+  }
+
+  const title = payload.title || "LeakLock Alert";
+  const options = {
+    body: payload.body || "",
+    icon: "/favicon.ico",
+    badge: "/favicon.ico",
+    tag: payload.tag || "leaklock-alert",
+    renotify: true,
+    data: payload.data || {},
+    actions: [
+      { action: "view", title: "View" },
+      { action: "dismiss", title: "Dismiss" },
+    ],
+  };
+
+  event.waitUntil(self.registration.showNotification(title, options));
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  if (event.action === "dismiss") return;
+
+  // Navigate to the job detail page if job_id is present
+  const data = event.notification.data || {};
+  const targetUrl = data.job_id ? `/jobs/${data.job_id}` : "/";
+
+  event.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then((windowClients) => {
+      // Focus existing tab if found
+      for (const client of windowClients) {
+        if (client.url.includes(targetUrl) && "focus" in client) {
+          return client.focus();
+        }
+      }
+      // Otherwise open new tab
+      return clients.openWindow(targetUrl);
+    })
+  );
+});
+
+// ── Cache strategies ────────────────────────────────────────────────────────
 
 async function networkFirst(request, cacheName) {
   try {

@@ -159,9 +159,9 @@ function JobsContent() {
         <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex gap-4 px-4 py-3 border-b border-gray-50 last:border-0">
-              <div className="h-4 w-24 bg-gray-100 animate-pulse rounded" />
-              <div className="h-4 w-20 bg-gray-100 animate-pulse rounded" />
-              <div className="h-4 w-16 bg-gray-100 animate-pulse rounded ml-auto" />
+              <div className="h-4 w-24 bg-gray-200/50 dark:bg-gray-700/30 animate-pulse rounded" />
+              <div className="h-4 w-20 bg-gray-200/50 dark:bg-gray-700/30 animate-pulse rounded" />
+              <div className="h-4 w-16 bg-gray-200/50 dark:bg-gray-700/30 animate-pulse rounded ml-auto" />
             </div>
           ))}
         </div>
@@ -274,8 +274,8 @@ export default function JobsPage() {
   return (
     <Suspense fallback={
       <div className="space-y-5">
-        <div className="h-8 w-32 bg-gray-100 animate-pulse rounded" />
-        <div className="h-40 bg-gray-100 animate-pulse rounded-xl" />
+        <div className="h-8 w-32 bg-gray-200/50 dark:bg-gray-700/30 animate-pulse rounded" />
+        <div className="h-40 bg-gray-200/50 dark:bg-gray-700/30 animate-pulse rounded-xl" />
       </div>
     }>
       <JobsContent />

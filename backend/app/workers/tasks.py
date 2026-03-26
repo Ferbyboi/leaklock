@@ -91,6 +91,17 @@ def process_field_notes(self, job_id: str, tenant_id: str):
             except Exception:
                 pass  # Fall back to generic prompt if schema lookup fails
 
+            # Plan gate — check job quota before expensive Sonnet call
+            from app.core.plan_gate import check_job_quota, PlanLimitExceeded
+            try:
+                check_job_quota(db, tenant_id)
+            except PlanLimitExceeded as ple:
+                db.table("field_notes").update({
+                    "parse_status": "plan_limit",
+                }).eq("id", note["id"]).eq("tenant_id", tenant_id).execute()
+                logger.warning("Plan limit hit: %s", ple)
+                return {"skipped": True, "reason": "plan_limit", "detail": str(ple)}
+
             # Parse with Claude Sonnet
             from app.workers.parse_worker import parse_field_notes
             parsed_items = parse_field_notes(raw_text, niche_system_prompt=niche_prompt)

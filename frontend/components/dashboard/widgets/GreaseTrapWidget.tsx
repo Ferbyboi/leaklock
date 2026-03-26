@@ -45,7 +45,7 @@ export function GreaseTrapWidget({ locationId }: { locationId?: string }) {
       <span className="text-sm font-semibold text-gray-900 mb-3">Grease Trap</span>
 
       {loading ? (
-        <div className="h-20 bg-gray-100 rounded animate-pulse" />
+        <div className="h-20 bg-gray-200/50 dark:bg-gray-700/30 rounded animate-pulse" />
       ) : !latest ? (
         <p className="text-xs text-gray-500 text-center py-6">No inspections recorded</p>
       ) : (

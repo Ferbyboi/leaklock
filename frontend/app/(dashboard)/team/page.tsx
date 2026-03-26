@@ -154,7 +154,7 @@ export default function TeamPage() {
         </h2>
         {loading ? (
           <div className="space-y-2">
-            {[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+            {[1,2,3].map(i => <div key={i} className="h-16 rounded-xl bg-gray-200/50 dark:bg-gray-700/30 animate-pulse" />)}
           </div>
         ) : (
           <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 divide-y divide-gray-50 dark:divide-gray-800">

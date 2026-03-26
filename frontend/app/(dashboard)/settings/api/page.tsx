@@ -86,7 +86,10 @@ export default function ApiSettingsPage() {
     async function init() {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      const tid: string = user.user_metadata?.tenant_id ?? user.id;
+      const tid: string =
+        user.app_metadata?.tenant_id ??
+        user.user_metadata?.tenant_id ??
+        user.id;
       setTenantId(tid);
       await loadKeys(tid);
     }
@@ -163,7 +166,7 @@ export default function ApiSettingsPage() {
         {loading ? (
           <div className="p-6 space-y-3">
             {[1, 2].map((i) => (
-              <div key={i} className="h-10 rounded-lg bg-gray-100 animate-pulse" />
+              <div key={i} className="h-10 rounded-lg bg-gray-200/50 dark:bg-gray-700/30 animate-pulse" />
             ))}
           </div>
         ) : error ? (

@@ -30,6 +30,7 @@ _OPTIONAL_ENV_GROUPS = {
     "Slack alerts": ["SLACK_WEBHOOK_URL"],
     "Stripe billing": ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"],
     "Rate limiting (Upstash Redis)": ["UPSTASH_REDIS_REST_URL", "UPSTASH_REDIS_REST_TOKEN"],
+    "Web Push (VAPID)": ["VAPID_PUBLIC_KEY", "VAPID_PRIVATE_KEY"],
 }
 
 # Upstash Redis — used for per-tenant notification rate limiting
@@ -136,6 +137,8 @@ from app.connectors import servicetitan as connector_servicetitan
 from app.connectors import housecallpro as connector_housecallpro
 from app.connectors import toast as connector_toast
 from app.connectors import square as connector_square
+from app.connectors import oauth as connector_oauth
+from app.routers import push
 
 app.include_router(jobs.router, prefix="/jobs", tags=["jobs"])
 app.include_router(webhooks.router, tags=["webhooks"])
@@ -155,3 +158,5 @@ app.include_router(notifications.router, tags=["notifications"])
 app.include_router(ocr.router, tags=["ocr"])
 app.include_router(diagnostic.router, tags=["diagnostic"])
 app.include_router(twilio_sms.router)
+app.include_router(push.router, tags=["push"])
+app.include_router(connector_oauth.router, tags=["oauth"])

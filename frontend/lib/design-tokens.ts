@@ -222,6 +222,7 @@ export const STATUS_THEME = {
 export const PLAN_RANK = {
   starter:    1,
   pro:        2,
+  growth:     2,  // legacy alias — same tier as pro
   enterprise: 3,
 } as const;
 

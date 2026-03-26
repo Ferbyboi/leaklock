@@ -26,9 +26,10 @@ const PLAN_FEATURES: PlanFeature[] = [
   { label: "Dedicated support",     starter: false,      pro: false,      enterprise: true },
 ];
 
-const PLAN_PRICES: Record<PlanTier, { monthly: number; label: string; description: string; priceId: string }> = {
+const PLAN_PRICES: Record<string, { monthly: number; label: string; description: string; priceId: string }> = {
   starter:    { monthly: 49,   label: "Starter",    description: "For small crews",          priceId: process.env.NEXT_PUBLIC_STRIPE_STARTER_PRICE_ID  ?? "" },
   pro:        { monthly: 149,  label: "Pro",         description: "For growing businesses",   priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID      ?? "" },
+  growth:     { monthly: 149,  label: "Pro",         description: "For growing businesses",   priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID      ?? "" },
   enterprise: { monthly: 499,  label: "Enterprise",  description: "Unlimited scale + support", priceId: process.env.NEXT_PUBLIC_STRIPE_ENTERPRISE_PRICE_ID ?? "" },
 };
 
@@ -101,23 +102,23 @@ export default function BillingPage() {
 
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {[1,2,3].map(i => <div key={i} className="h-64 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+          {[1,2,3].map(i => <div key={i} className="h-64 rounded-xl bg-gray-200/50 dark:bg-gray-700/30 animate-pulse" />)}
         </div>
       ) : (
         <>
           {/* Current plan banner */}
-          {currentPlan && (
+          {currentPlan && PLAN_PRICES[currentPlan] && (
             <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-xl px-5 py-4 flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                  Current plan: <span className="capitalize">{currentPlan}</span>
+                  Current plan: <span className="capitalize">{PLAN_PRICES[currentPlan].label}</span>
                 </p>
                 <p className="text-xs text-blue-600 dark:text-blue-400 mt-0.5">
                   ${PLAN_PRICES[currentPlan].monthly}/mo · {PLAN_PRICES[currentPlan].description}
                 </p>
               </div>
               <span className="text-xs font-medium px-2.5 py-1 bg-blue-600 text-white rounded-full capitalize">
-                {currentPlan}
+                {PLAN_PRICES[currentPlan].label}
               </span>
             </div>
           )}
@@ -126,9 +127,11 @@ export default function BillingPage() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {plans.map(plan => {
               const info = PLAN_PRICES[plan];
-              const isCurrent = plan === currentPlan;
-              const isUpgrade = currentPlan ? PLAN_RANK[plan] > PLAN_RANK[currentPlan] : true;
-              const isDowngrade = currentPlan ? PLAN_RANK[plan] < PLAN_RANK[currentPlan] : false;
+              // treat "growth" (legacy alias) as equivalent to "pro"
+              const normalizedCurrent = currentPlan === "growth" ? "pro" : currentPlan;
+              const isCurrent = plan === normalizedCurrent;
+              const isUpgrade = normalizedCurrent ? PLAN_RANK[plan] > PLAN_RANK[normalizedCurrent] : true;
+              const isDowngrade = normalizedCurrent ? PLAN_RANK[plan] < PLAN_RANK[normalizedCurrent] : false;
               const isPro = plan === "pro";
 
               return (

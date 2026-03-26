@@ -124,7 +124,7 @@ export function AlertsList() {
       {/* Alert list */}
       {loading ? (
         <div className="space-y-2">
-          {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-xl bg-gray-100 dark:bg-gray-800 animate-pulse" />)}
+          {[1,2,3,4].map(i => <div key={i} className="h-20 rounded-xl bg-gray-200/50 dark:bg-gray-700/30 animate-pulse" />)}
         </div>
       ) : alerts.length === 0 ? (
         <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-100 dark:border-gray-800 px-6 py-12 text-center">

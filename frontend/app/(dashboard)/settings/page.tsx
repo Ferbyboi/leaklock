@@ -7,6 +7,7 @@ type NotifPrefs = {
   email_alerts: boolean;
   sms_alerts: boolean;
   slack_alerts: boolean;
+  push_alerts: boolean;
   alert_threshold_cents: number;
 };
 
@@ -14,6 +15,7 @@ const DEFAULT_PREFS: NotifPrefs = {
   email_alerts:           true,
   sms_alerts:             false,
   slack_alerts:           false,
+  push_alerts:            false,
   alert_threshold_cents:  2500,
 };
 
@@ -111,8 +113,52 @@ export default function SettingsPage() {
     setProfileSaving(false);
   }
 
-  function toggle(key: keyof NotifPrefs) {
-    setPrefs((p) => ({ ...p, [key]: !p[key] }));
+  async function toggle(key: keyof NotifPrefs) {
+    const newVal = !prefs[key];
+    setPrefs((p) => ({ ...p, [key]: newVal }));
+
+    // Handle push subscription when toggling push_alerts
+    if (key === "push_alerts") {
+      if (newVal) {
+        try {
+          const permission = await Notification.requestPermission();
+          if (permission !== "granted") {
+            setPrefs((p) => ({ ...p, push_alerts: false }));
+            setError("Push notification permission denied. Enable it in your browser settings.");
+            return;
+          }
+          // Register push subscription
+          const reg = await navigator.serviceWorker.ready;
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
+          const vapidResp = await fetch(`${apiUrl}/push/vapid-key`);
+          if (!vapidResp.ok) throw new Error("Push not configured on server");
+          const { vapid_public_key } = await vapidResp.json();
+
+          const sub = await reg.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: vapid_public_key,
+          });
+          const subJson = sub.toJSON();
+
+          const { data: { session } } = await sb.auth.getSession();
+          await fetch(`${apiUrl}/push/subscribe`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${session?.access_token}`,
+            },
+            body: JSON.stringify({
+              endpoint: subJson.endpoint,
+              p256dh: subJson.keys?.p256dh ?? "",
+              auth: subJson.keys?.auth ?? "",
+            }),
+          });
+        } catch (err: any) {
+          setPrefs((p) => ({ ...p, push_alerts: false }));
+          setError(err?.message ?? "Failed to enable push notifications");
+        }
+      }
+    }
   }
 
   return (
@@ -124,7 +170,7 @@ export default function SettingsPage() {
 
       {loading ? (
         <div className="space-y-4">
-          {[1, 2].map((i) => <div key={i} className="h-32 rounded-xl bg-gray-100 animate-pulse" />)}
+          {[1, 2].map((i) => <div key={i} className="h-32 rounded-xl bg-gray-200/50 dark:bg-gray-700/30 animate-pulse" />)}
         </div>
       ) : (
         <>
@@ -187,6 +233,7 @@ export default function SettingsPage() {
                   [
                     { key: "email_alerts",  label: "Email alerts",  desc: "Get an email for every detected leak" },
                     { key: "sms_alerts",    label: "SMS alerts",    desc: "Get a text message (requires phone number)" },
+                    { key: "push_alerts",   label: "Push notifications", desc: "Browser/mobile push alerts (requires permission)" },
                     { key: "slack_alerts",  label: "Slack alerts",  desc: "Post to your connected Slack channel" },
                   ] as { key: keyof NotifPrefs; label: string; desc: string }[]
                 ).map(({ key, label, desc }) => (

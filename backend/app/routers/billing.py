@@ -190,3 +190,11 @@ async def stripe_webhook(
             }).eq("stripe_subscription_id", sub_id).execute()
 
     return {"received": True}
+
+
+@router.get("/billing/usage")
+async def get_billing_usage(user: dict = Security(get_current_user)):
+    """Return current month job usage and plan details for the billing page."""
+    from app.core.plan_gate import get_usage
+    supabase = get_supabase()
+    return get_usage(supabase, user["tenant_id"])
