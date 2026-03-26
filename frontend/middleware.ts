@@ -104,13 +104,17 @@ export async function middleware(request: NextRequest) {
       (user.user_metadata?.tenant_id as string | undefined);
 
     if (tenantId) {
-      const { data: tenant } = await supabase
-        .from('tenants')
-        .select('plan')
-        .eq('id', tenantId)
-        .single();
+      // Prefer plan from JWT claims (fast, no DB round-trip). Fall back to DB.
+      let plan = (user.app_metadata?.plan ?? user.user_metadata?.plan ?? null) as Plan;
 
-      const plan = (tenant?.plan ?? null) as Plan;
+      if (!plan) {
+        const { data: tenant } = await supabase
+          .from('tenants')
+          .select('plan')
+          .eq('id', tenantId)
+          .single();
+        plan = (tenant?.plan ?? null) as Plan;
+      }
       const gate = checkPlanGate(pathname, plan);
 
       if (!gate.allowed) {

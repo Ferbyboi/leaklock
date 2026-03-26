@@ -86,7 +86,7 @@ export function AlertsList() {
   const unackedCount = alerts.filter(a => !a.acknowledged_at).length;
 
   const FILTERS: { key: Filter; label: string }[] = [
-    { key: "unacknowledged", label: `Unread (${unackedCount})` },
+    { key: "unacknowledged", label: loading ? "Unread (…)" : `Unread (${unackedCount})` },
     { key: "all",            label: "All" },
     { key: "critical",       label: "Critical" },
     { key: "warning",        label: "Warning" },

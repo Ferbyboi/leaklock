@@ -153,9 +153,17 @@ export default function SettingsPage() {
               auth: subJson.keys?.auth ?? "",
             }),
           });
-        } catch (err: any) {
+
+          // Persist push_alerts: true immediately so DB stays in sync
+          const { data: { user } } = await sb.auth.getUser();
+          if (user) {
+            await sb.from("users").update({
+              notification_prefs: { ...prefs, push_alerts: true },
+            }).eq("id", user.id);
+          }
+        } catch (err: unknown) {
           setPrefs((p) => ({ ...p, push_alerts: false }));
-          setError(err?.message ?? "Failed to enable push notifications");
+          setError(err instanceof Error ? err.message : "Failed to enable push notifications");
         }
       }
     }

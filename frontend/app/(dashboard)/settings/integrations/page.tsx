@@ -65,8 +65,8 @@ export default function IntegrationsPage() {
       if (!resp.ok) throw new Error("Failed to load integrations");
       const data = await resp.json();
       setIntegrations(data.integrations || {});
-    } catch (err: any) {
-      setError(err?.message ?? "Failed to load integrations");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to load integrations");
     } finally {
       setLoading(false);
     }
@@ -88,8 +88,8 @@ export default function IntegrationsPage() {
       }
       const { authorize_url } = await resp.json();
       window.location.href = authorize_url;
-    } catch (err: any) {
-      setError(err?.message ?? "Connection failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Connection failed");
       setConnectingProvider(null);
     }
   }
@@ -101,16 +101,17 @@ export default function IntegrationsPage() {
       const { data: { session } } = await sb.auth.getSession();
       if (!session) return;
 
-      await fetch(`${apiUrl}/oauth/${provider}/disconnect`, {
+      const resp = await fetch(`${apiUrl}/oauth/${provider}/disconnect`, {
         method: "DELETE",
         headers: { Authorization: `Bearer ${session.access_token}` },
       });
+      if (!resp.ok) throw new Error("Disconnect failed");
       setIntegrations((prev) => ({
         ...prev,
         [provider]: { connected: false },
       }));
-    } catch (err: any) {
-      setError(err?.message ?? "Disconnect failed");
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Disconnect failed");
     }
   }
 

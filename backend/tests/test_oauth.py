@@ -50,7 +50,8 @@ def test_oauth_status_returns_providers(client):
     "SQUARE_CLIENT_ID": "test-client-id",
     "SQUARE_CLIENT_SECRET": "test-secret",
 })
-def test_oauth_connect_returns_authorize_url(client):
+@patch("app.connectors.oauth._set_oauth_state")
+def test_oauth_connect_returns_authorize_url(_mock_set_state, client):
     resp = client.get("/oauth/square/connect", headers=AUTH_HEADERS)
     assert resp.status_code == 200
     assert "authorize_url" in resp.json()

@@ -13,6 +13,7 @@ All tokens are stored in the `oauth_tokens` table with tenant_id for RLS.
 """
 from __future__ import annotations
 
+import json
 import logging
 import os
 import secrets
@@ -21,6 +22,7 @@ from typing import Optional
 from urllib.parse import urlencode
 
 import httpx
+import redis
 import sentry_sdk
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, Security
 from fastapi.responses import RedirectResponse
@@ -65,8 +67,24 @@ PROVIDERS: dict[str, dict] = {
     },
 }
 
-# In-memory state store for CSRF (production should use Redis)
-_oauth_states: dict[str, dict] = {}
+# Redis-backed state store for CSRF — works across multiple workers
+_REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+_OAUTH_STATE_TTL = 600  # 10 minutes
+
+def _get_redis() -> redis.Redis:
+    return redis.from_url(_REDIS_URL, decode_responses=True)
+
+def _set_oauth_state(state: str, data: dict) -> None:
+    _get_redis().setex(f"oauth_state:{state}", _OAUTH_STATE_TTL, json.dumps(data))
+
+def _pop_oauth_state(state: str) -> Optional[dict]:
+    r = _get_redis()
+    key = f"oauth_state:{state}"
+    raw = r.get(key)
+    if raw:
+        r.delete(key)
+        return json.loads(raw)
+    return None
 
 
 def _get_provider_config(provider: str) -> dict:
@@ -108,13 +126,13 @@ async def oauth_connect(
     """Redirect the owner to the CRM provider's OAuth authorization page."""
     config = _get_provider_config(provider)
 
-    # Generate CSRF state token
+    # Generate CSRF state token (stored in Redis, expires in 10 min)
     state = secrets.token_urlsafe(32)
-    _oauth_states[state] = {
+    _set_oauth_state(state, {
         "tenant_id": user["tenant_id"],
         "user_id": user["user_id"],
         "provider": provider,
-    }
+    })
 
     params = {
         "client_id": config["client_id"],
@@ -141,8 +159,8 @@ async def oauth_callback(
     state: str = Query(...),
 ):
     """Exchange the authorization code for access/refresh tokens and store them."""
-    # Validate CSRF state
-    state_data = _oauth_states.pop(state, None)
+    # Validate CSRF state (atomically pop from Redis)
+    state_data = _pop_oauth_state(state)
     if not state_data or state_data["provider"] != provider:
         raise HTTPException(status_code=400, detail="Invalid or expired OAuth state")
 
