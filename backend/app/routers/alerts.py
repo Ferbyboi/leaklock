@@ -1,4 +1,5 @@
 """Alerts endpoints — list and acknowledge revenue leak alerts."""
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Query, Security
 from pydantic import BaseModel
 from typing import Optional
@@ -71,7 +72,7 @@ async def acknowledge_alert(
         raise HTTPException(status_code=404, detail="Alert not found")
 
     supabase.table("alerts").update({
-        "acknowledged_at": "now()",
+        "acknowledged_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", str(alert_id)).eq("tenant_id", user["tenant_id"]).execute()
 
     return {"acknowledged": True, "alert_id": str(alert_id)}
@@ -82,7 +83,7 @@ async def acknowledge_all_alerts(user: dict = Security(get_current_user)):
     """Mark all unacknowledged alerts for this tenant as read."""
     supabase = get_supabase()
     supabase.table("alerts").update({
-        "acknowledged_at": "now()",
+        "acknowledged_at": datetime.now(timezone.utc).isoformat(),
     }).eq("tenant_id", user["tenant_id"]).is_("acknowledged_at", "null").execute()
 
     return {"acknowledged_all": True}

@@ -117,5 +117,5 @@ def parse_field_notes(
         with sentry_sdk.new_scope() as scope:
             scope.set_extra("raw_text_preview", raw_text[:500])
             scope.set_extra("word_count", len(raw_text.split()))
-            scope.capture_exception(exc)
+            sentry_sdk.capture_exception(exc)
         return []

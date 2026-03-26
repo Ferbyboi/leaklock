@@ -20,6 +20,7 @@ import json
 import logging
 import os
 import uuid as uuid_mod
+from datetime import datetime, timezone
 from typing import Optional
 
 import sentry_sdk
@@ -254,7 +255,7 @@ async def receive_housecallpro_job_complete(
             scope.set_tag("tenant_id", tenant_id)
             sentry_sdk.capture_exception(exc)
         db.table("webhook_events").update(
-            {"status": "error", "processed_at": "now()"}
+            {"status": "error", "processed_at": datetime.now(timezone.utc).isoformat()}
         ).eq("id", event_id).eq("tenant_id", tenant_id).execute()
         raise HTTPException(status_code=422, detail="Payload normalization failed")
 
@@ -265,7 +266,7 @@ async def receive_housecallpro_job_complete(
             tenant_id,
         )
         db.table("webhook_events").update(
-            {"status": "complete", "processed_at": "now()"}
+            {"status": "complete", "processed_at": datetime.now(timezone.utc).isoformat()}
         ).eq("id", event_id).eq("tenant_id", tenant_id).execute()
         return {"received": True, "action": "ignored_missing_job_id"}
 
@@ -325,7 +326,7 @@ async def receive_housecallpro_job_complete(
 
         task = process_field_notes.delay(job_id, tenant_id)
         db.table("webhook_events").update(
-            {"status": "complete", "processed_at": "now()"}
+            {"status": "complete", "processed_at": datetime.now(timezone.utc).isoformat()}
         ).eq("id", event_id).eq("tenant_id", tenant_id).execute()
         return {
             "received": True,

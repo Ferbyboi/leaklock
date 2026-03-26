@@ -11,6 +11,7 @@ from __future__ import annotations
 import hashlib
 import hmac
 import logging
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import sentry_sdk
@@ -223,7 +224,7 @@ async def receive_jobber_webhook(
     data = payload.get("data") or {}
     normalized = normalize_jobber_payload(event_type, data, tenant_id)
     if not normalized:
-        db.table("webhook_events").update({"status": "complete", "processed_at": "now()"}).eq("id", event_id).execute()
+        db.table("webhook_events").update({"status": "complete", "processed_at": datetime.now(timezone.utc).isoformat()}).eq("id", event_id).execute()
         return {"received": True, "action": "ignored_event_type", "event": event_type}
 
     from app.workers.tasks import process_field_notes, run_three_way_match
@@ -258,7 +259,7 @@ async def receive_jobber_webhook(
                 "line_items": [i.model_dump() for i in normalized.estimate_items],
             }, on_conflict="tenant_id,job_id").execute()
         task = process_field_notes.delay(job_id, tenant_id)
-        db.table("webhook_events").update({"status": "complete", "processed_at": "now()"}).eq("id", event_id).execute()
+        db.table("webhook_events").update({"status": "complete", "processed_at": datetime.now(timezone.utc).isoformat()}).eq("id", event_id).execute()
         return {"received": True, "action": "queued_parse", "task_id": task.id}
 
     if "INVOICE" in event_type.upper():
@@ -269,8 +270,8 @@ async def receive_jobber_webhook(
                 "line_items": [i.model_dump() for i in normalized.invoice_items],
             }, on_conflict="tenant_id,job_id").execute()
         task = run_three_way_match.delay(job_id, tenant_id)
-        db.table("webhook_events").update({"status": "complete", "processed_at": "now()"}).eq("id", event_id).execute()
+        db.table("webhook_events").update({"status": "complete", "processed_at": datetime.now(timezone.utc).isoformat()}).eq("id", event_id).execute()
         return {"received": True, "action": "queued_match", "task_id": task.id}
 
-    db.table("webhook_events").update({"status": "complete", "processed_at": "now()"}).eq("id", event_id).execute()
+    db.table("webhook_events").update({"status": "complete", "processed_at": datetime.now(timezone.utc).isoformat()}).eq("id", event_id).execute()
     return {"received": True, "action": "no_action", "event": event_type}

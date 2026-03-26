@@ -18,6 +18,7 @@ import os
 import smtplib
 import ssl
 import uuid
+from datetime import datetime, timezone
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from typing import Any, Dict, List, Optional
@@ -117,7 +118,7 @@ def _log_notification(
         "job_id":    job_id,
         "channel":   channel,
         "status":    status,
-        "sent_at":   "now()",
+        "sent_at":   datetime.now(timezone.utc).isoformat(),
     }
     if error_msg:
         row["error_msg"] = error_msg[:500]  # guard against oversized messages

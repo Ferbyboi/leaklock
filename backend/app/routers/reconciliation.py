@@ -1,5 +1,6 @@
 """Reconciliation review routes — auditor actions on match results."""
 import sentry_sdk
+from datetime import datetime, timezone
 from fastapi import APIRouter, HTTPException, Security
 from pydantic import BaseModel
 from typing import Literal
@@ -56,7 +57,7 @@ async def review_reconciliation(
         "status": new_status,
         "auditor_action": body.action,
         "auditor_id": user["user_id"],
-        "reviewed_at": "now()",
+        "reviewed_at": datetime.now(timezone.utc).isoformat(),
     }).eq("id", str(result_id)).eq("tenant_id", user["tenant_id"]).execute()
 
     # Act on the job based on decision

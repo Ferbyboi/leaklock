@@ -1,6 +1,10 @@
 import asyncio
+import logging
+from datetime import datetime, timezone
 import sentry_sdk
 from celery import shared_task
+
+logger = logging.getLogger(__name__)
 from app.celery_app import celery_app  # noqa: F401 — registers tasks with app
 from app.db import get_db
 
@@ -109,7 +113,7 @@ def process_field_notes(self, job_id: str, tenant_id: str):
             db.table("field_notes").update({
                 "parsed_items": parsed_items,
                 "parse_status": "complete",
-                "parsed_at": "now()",
+                "parsed_at": datetime.now(timezone.utc).isoformat(),
             }).eq("id", note["id"]).eq("tenant_id", tenant_id).execute()
 
             # Chain into reconciliation
@@ -423,7 +427,7 @@ def cleanup_old_alerts():
     result = (
         db.table("alerts")
         .delete()
-        .is_not("acknowledged_at", "null")
+        .not_.is_("acknowledged_at", "null")
         .lt("acknowledged_at", cutoff)
         .execute()
     )
@@ -934,7 +938,7 @@ def _run_compliance_check(db, event_id: str, tenant_id: str, tenant_type: str, p
         "status": status,
         "violations": violations,
         "score": max(0, score),
-        "checked_at": "now()",
+        "checked_at": datetime.now(timezone.utc).isoformat(),
     }).execute()
 
 

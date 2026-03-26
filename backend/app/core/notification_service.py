@@ -15,6 +15,7 @@ import logging
 import os
 import time
 import uuid
+from datetime import datetime, timezone
 from collections import defaultdict
 from typing import Any, Dict, List, Optional
 
@@ -206,7 +207,7 @@ def _log_notification(
         "channel":    channel,
         "recipient":  recipient,
         "status":     status,
-        "sent_at":    "now()",
+        "sent_at":    datetime.now(timezone.utc).isoformat(),
     }).execute()
 
 
@@ -346,7 +347,7 @@ class NotificationService:
                 with sentry_sdk.new_scope() as scope:
                     scope.set_extra("job_id", alert_id)
                     scope.set_extra("tenant_id", tenant_id)
-                    scope.capture_exception(exc)
+                    sentry_sdk.capture_exception(exc)
                 _log_notification(db, tenant_id, alert_id, channel, email or recipient_user_id, "error")
 
         return {"dispatched": dispatched, "skipped": skipped, "errors": errors}

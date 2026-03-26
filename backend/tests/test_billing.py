@@ -262,7 +262,7 @@ def test_stripe_webhook_bad_signature_returns_400():
         import stripe as _stripe
         with patch(
             "app.routers.billing.stripe.Webhook.construct_event",
-            side_effect=_stripe.error.SignatureVerificationError("bad sig", "t=1"),
+            side_effect=_stripe.SignatureVerificationError("bad sig", "t=1"),
         ):
             resp = client.post(
                 "/webhooks/stripe",
