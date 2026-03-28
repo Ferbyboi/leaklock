@@ -30,8 +30,7 @@ node_modules/
 *.min.js
 *.min.css
 
-# ■■ Lock files ■■
-package-lock.json
+# ■■ Lock files (keep package-lock.json for reproducible CI builds) ■■
 yarn.lock
 poetry.lock
 uv.lock

@@ -86,7 +86,12 @@ export default function BillingPage() {
         window.location.href = `/onboarding/step/4?client_secret=${body.client_secret}`;
       }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Checkout failed");
+      const msg = err instanceof Error ? err.message : "Checkout failed";
+      if (msg.includes("Price ID not configured")) {
+        setError("Billing is not set up yet. Stripe subscription plans need to be configured.");
+      } else {
+        setError(msg);
+      }
       setCheckingOut(null);
     }
   }
