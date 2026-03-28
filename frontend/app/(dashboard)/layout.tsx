@@ -11,6 +11,7 @@ import { NicheToggle } from '@/components/dashboard/NicheToggle';
 import { RealtimeProvider } from '@/components/dashboard/RealtimeProvider';
 import { CommandPalette } from '@/components/ui/CommandPalette';
 import { MobileSidebar } from '@/components/ui/MobileSidebar';
+import { OnboardingTour } from '@/components/ui/OnboardingTour';
 import type { NicheType } from '@/lib/design-tokens';
 
 export default async function DashboardLayout({
@@ -48,6 +49,7 @@ export default async function DashboardLayout({
   }
 
   const navLinks = [
+    { href: '/getting-started', label: 'Getting Started', icon: '⊛', roles: ['owner', 'auditor', 'tech'] },
     { href: '/dashboard', label: 'Dashboard',    icon: '⬡',  roles: ['owner', 'auditor', 'tech'] },
     { href: '/jobs',     label: 'Jobs',         icon: '⊞',  roles: ['owner', 'auditor', 'tech'] },
     { href: '/auditor',  label: 'Auditor',      icon: '⊘',  roles: ['owner', 'auditor'] },
@@ -129,6 +131,7 @@ export default async function DashboardLayout({
         </main>
       </div>
       <CommandPalette />
+      <OnboardingTour />
     </RealtimeProvider>
   );
 }
