@@ -2,8 +2,8 @@ name: Health Monitor
 
 on:
   schedule:
-    # Check every 15 minutes
-    - cron: '*/15 * * * *'
+    # Check every 6 hours
+    - cron: '0 */6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -16,9 +16,7 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
             https://leaklock-production.up.railway.app/health || echo "000")
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          if [ "$STATUS" != "200" ]; then
-            echo "Backend health check failed with status: $STATUS"
-          fi
+          echo "Backend status: $STATUS"
 
       - name: Check frontend health
         id: frontend
@@ -26,9 +24,7 @@ jobs:
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 \
             https://leaklock-three.vercel.app || echo "000")
           echo "status=$STATUS" >> "$GITHUB_OUTPUT"
-          if [ "$STATUS" != "200" ]; then
-            echo "Frontend health check failed with status: $STATUS"
-          fi
+          echo "Frontend status: $STATUS"
 
       - name: Create issue if unhealthy
         if: steps.backend.outputs.status != '200' || steps.frontend.outputs.status != '200'
