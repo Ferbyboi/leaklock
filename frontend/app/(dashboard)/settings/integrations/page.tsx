@@ -65,8 +65,8 @@ export default function IntegrationsPage() {
       if (!resp.ok) throw new Error("Failed to load integrations");
       const data = await resp.json();
       setIntegrations(data.integrations || {});
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to load integrations");
+    } catch {
+      // Backend not reachable — show empty state, not an error
     } finally {
       setLoading(false);
     }
@@ -89,9 +89,8 @@ export default function IntegrationsPage() {
       const data = await resp.json();
       if (!data.authorize_url) throw new Error("No authorize URL returned");
       window.location.href = data.authorize_url;
-      window.location.href = authorize_url;
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Connection failed");
+      setError(err instanceof Error ? err.message : "Failed to start connection. OAuth credentials may not be configured yet.");
       setConnectingProvider(null);
     }
   }
