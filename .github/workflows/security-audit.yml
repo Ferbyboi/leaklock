@@ -6,13 +6,26 @@ on:
   schedule:
     - cron: '0 9 * * 1'  # Every Monday 9am UTC
 
+permissions:
+  issues: write
+  contents: read
+
 jobs:
   claude-security-audit:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: anthropics/claude-code-action@v1
+      - name: Check for API key
+        id: check-key
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_API_KEY not configured — skipping security audit"
+          fi
+
+      - if: steps.check-key.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_MODEL: claude-opus-4-6
           ANTHROPIC_CLAUDE_CODE_EFFORT: high

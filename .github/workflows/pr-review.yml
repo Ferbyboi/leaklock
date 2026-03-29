@@ -4,13 +4,26 @@ on:
   pull_request:
     types: [opened, synchronize]
 
+permissions:
+  pull-requests: write
+  contents: read
+
 jobs:
   claude-review:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: anthropics/claude-code-action@v1
+      - name: Check for API key
+        id: check-key
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_API_KEY not configured — skipping review"
+          fi
+
+      - if: steps.check-key.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_MODEL: claude-sonnet-4-6
           ANTHROPIC_CLAUDE_CODE_EFFORT: medium

@@ -10,7 +10,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: anthropics/claude-code-action@v1
+      - name: Check for API key
+        id: check-key
+        run: |
+          if [ -z "${{ secrets.ANTHROPIC_API_KEY }}" ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            echo "ANTHROPIC_API_KEY not configured — skipping quality check"
+          fi
+
+      - if: steps.check-key.outputs.skip != 'true'
+        uses: anthropics/claude-code-action@v1
         env:
           ANTHROPIC_MODEL: claude-haiku-4-5-20251001
           ANTHROPIC_CLAUDE_CODE_EFFORT: low
