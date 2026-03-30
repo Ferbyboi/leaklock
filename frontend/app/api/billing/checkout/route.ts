@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
   }
 
   // ── 4. Create Stripe Checkout Session (hosted mode) ──────────────────────
-  const frontendUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.FRONTEND_URL ?? 'http://localhost:3000';
+  const frontendUrl = process.env.NEXT_PUBLIC_APP_URL?.trim() || process.env.FRONTEND_URL?.trim() || 'https://leaklock-three.vercel.app';
 
   let checkoutSession: Stripe.Checkout.Session;
   try {
