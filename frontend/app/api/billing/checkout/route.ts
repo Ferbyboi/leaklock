@@ -19,7 +19,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 
 function getStripe() {
   if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set');
-  return new Stripe(process.env.STRIPE_SECRET_KEY);
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    httpClient: Stripe.createFetchHttpClient(),
+  });
 }
 
 // ── Price ID mapping from env vars ────────────────────────────────────────────
