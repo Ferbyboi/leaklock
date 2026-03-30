@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       .eq('id', tenantId);
   }
 
-  // ── 4. Create Stripe Checkout Session (embedded mode) ─────────────────────
+  // ── 4. Create Stripe Checkout Session (hosted mode) ──────────────────────
   const frontendUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.FRONTEND_URL ?? 'http://localhost:3000';
 
   let checkoutSession: Stripe.Checkout.Session;
@@ -115,9 +115,9 @@ export async function POST(request: NextRequest) {
     checkoutSession = await stripe.checkout.sessions.create({
       customer: customerId,
       mode: 'subscription',
-      ui_mode: 'embedded',
       line_items: [{ price: priceId, quantity: 1 }],
-      return_url: `${frontendUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      success_url: `${frontendUrl}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${frontendUrl}/billing`,
       customer_email: !customerId ? session.user.email : undefined,
       metadata: {
         tenant_id: tenantId,
@@ -132,11 +132,5 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Embedded mode returns client_secret; hosted mode returns url
-  if (checkoutSession.client_secret) {
-    return NextResponse.json({ client_secret: checkoutSession.client_secret });
-  }
-
-  // Fallback: hosted mode (ui_mode not supported in some configurations)
-  return NextResponse.json({ checkout_url: checkoutSession.url });
+  return NextResponse.json({ url: checkoutSession.url });
 }
