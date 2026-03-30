@@ -107,7 +107,16 @@ export default async function ReportsPage() {
     .order('run_at', { ascending: false })
     .limit(500);
 
-  const safeResults: ReconciliationResult[] = (results as unknown as ReconciliationResult[]) ?? [];
+  // Supabase may return the joined `jobs` relation as an array (one-to-many)
+  // or as null when there is no matching row. Normalise it to a single object
+  // or null so the rest of the page can use `r.jobs?.field` safely without
+  // hitting "Cannot read properties of null (reading '0')".
+  const safeResults: ReconciliationResult[] = ((results as unknown as Array<
+    Omit<ReconciliationResult, 'jobs'> & { jobs: ReconciliationResult['jobs'] | ReconciliationResult['jobs'][] | null }
+  >) ?? []).map((r) => ({
+    ...r,
+    jobs: Array.isArray(r.jobs) ? (r.jobs[0] ?? null) : (r.jobs ?? null),
+  }));
 
   // ── Compute KPI metrics ─────────────────────────────────────────────────────
 
