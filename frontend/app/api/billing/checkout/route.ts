@@ -18,8 +18,9 @@ import { createServerSupabaseClient } from '@/lib/supabase-server';
 // ── Stripe client (server-side only, lazy to avoid build-time errors) ────────
 
 function getStripe() {
-  if (!process.env.STRIPE_SECRET_KEY) throw new Error('STRIPE_SECRET_KEY is not set');
-  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+  const key = process.env.STRIPE_SECRET_KEY?.trim();
+  if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
+  return new Stripe(key, {
     httpClient: Stripe.createFetchHttpClient(),
   });
 }
@@ -29,9 +30,9 @@ function getStripe() {
 type Plan = 'starter' | 'pro' | 'enterprise';
 
 const PLAN_PRICE_IDS: Record<Plan, string | undefined> = {
-  starter:    process.env.STRIPE_STARTER_PRICE_ID,
-  pro:        process.env.STRIPE_PRO_PRICE_ID,
-  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID,
+  starter:    process.env.STRIPE_STARTER_PRICE_ID?.trim(),
+  pro:        process.env.STRIPE_PRO_PRICE_ID?.trim(),
+  enterprise: process.env.STRIPE_ENTERPRISE_PRICE_ID?.trim(),
 };
 
 // ── POST handler ──────────────────────────────────────────────────────────────
