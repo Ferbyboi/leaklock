@@ -16,11 +16,13 @@ _REQUIRED_ENV = [
     "SUPABASE_SERVICE_KEY",
 ]
 
-# At least one JWT secret must be present (SUPABASE_JWT_SECRET preferred, JWT_SECRET legacy)
+# JWT verification: JWKS (via SUPABASE_URL) is preferred; HS256 secret is optional fallback
 def _check_jwt_secret():
-    if not os.getenv("SUPABASE_JWT_SECRET") and not os.getenv("JWT_SECRET"):
+    has_secret = os.getenv("SUPABASE_JWT_SECRET") or os.getenv("JWT_SECRET")
+    has_jwks_url = os.getenv("SUPABASE_URL")
+    if not has_secret and not has_jwks_url:
         raise RuntimeError(
-            "Missing JWT signing secret — set SUPABASE_JWT_SECRET (preferred) or JWT_SECRET"
+            "JWT verification unavailable — set SUPABASE_URL (for JWKS) or SUPABASE_JWT_SECRET"
         )
 
 # Optional — absence disables the channel but the app still starts
