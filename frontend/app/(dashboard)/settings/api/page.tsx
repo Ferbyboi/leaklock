@@ -84,14 +84,25 @@ export default function ApiSettingsPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) return;
-      const tid: string =
-        user.app_metadata?.tenant_id ??
-        user.user_metadata?.tenant_id ??
-        user.id;
-      setTenantId(tid);
-      await loadKeys(tid);
+      try {
+        const { data, error: authErr } = await sb.auth.getUser();
+        const user = data?.user ?? null;
+        if (authErr || !user) {
+          setError(authErr?.message ?? "Not authenticated.");
+          setLoading(false);
+          return;
+        }
+        const tid: string =
+          user.app_metadata?.tenant_id ??
+          user.user_metadata?.tenant_id ??
+          user.id;
+        setTenantId(tid);
+        await loadKeys(tid);
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : "Failed to load API keys.";
+        setError(msg);
+        setLoading(false);
+      }
     }
     init();
   }, [sb, loadKeys]);
