@@ -95,15 +95,24 @@ export async function POST(request: NextRequest) {
   let customerId: string = tenant.stripe_customer_id ?? '';
 
   const stripe = getStripe();
+  const keyMode = process.env.STRIPE_SECRET_KEY?.slice(0, 7) ?? 'unknown';
+  console.log(`[billing/checkout] key mode=${keyMode} tenant=${tenantId} existingCustomer=${customerId || 'none'} priceId=${priceId}`);
 
   // Create a Stripe Customer on first checkout
   if (!customerId) {
-    const customer = await stripe.customers.create({
-      email: session.user.email,
-      name: tenant.name ?? undefined,
-      metadata: { tenant_id: tenantId },
-    });
-    customerId = customer.id;
+    try {
+      const customer = await stripe.customers.create({
+        email: session.user.email,
+        name: tenant.name ?? undefined,
+        metadata: { tenant_id: tenantId },
+      });
+      customerId = customer.id;
+      console.log(`[billing/checkout] Created customer=${customerId}`);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      console.error('[billing/checkout] Customer creation failed:', msg);
+      return NextResponse.json({ error: `Failed to create Stripe customer: ${msg}` }, { status: 500 });
+    }
 
     // Persist the new customer ID — best-effort, don't fail checkout if this fails
     await supabase
