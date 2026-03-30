@@ -96,7 +96,7 @@ export default function TeamPage() {
     setSavingId(null);
   }
 
-  const initials = (email: string) => email[0]?.toUpperCase() ?? "?";
+  const initials = (email: string | null) => (email?.[0] ?? '?').toUpperCase();
 
   return (
     <div className="max-w-3xl mx-auto space-y-8">

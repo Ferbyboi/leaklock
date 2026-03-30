@@ -37,11 +37,14 @@ const PLAN_PRICE_IDS: Record<Plan, string | undefined> = {
 export async function POST(request: NextRequest) {
   // ── 1. Authenticate the caller ─────────────────────────────────────────────
   const supabase = await createServerSupabaseClient();
-  const { data: { session } } = await supabase.auth.getSession();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  if (!session?.user) {
+  if (!user) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
+
+  // Shim so the rest of the handler can use session.user unchanged
+  const session = { user };
 
   // ── 2. Parse and validate request body ─────────────────────────────────────
   let body: { plan?: string; tenant_id?: string };
@@ -125,9 +128,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
-    console.error('[billing/checkout] Stripe session creation failed:', err);
+    const stripeMsg = err instanceof Error ? err.message : String(err);
+    console.error('[billing/checkout] Stripe session creation failed:', stripeMsg);
     return NextResponse.json(
-      { error: 'Failed to create checkout session' },
+      { error: `Failed to create checkout session: ${stripeMsg}` },
       { status: 500 },
     );
   }
